@@ -2034,19 +2034,29 @@ _csRoot.render(React.createElement(CosmicSlug));
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       });
     }
-    // Scale the game canvas to fit any screen size
+    // Rotate overlay for portrait mode on mobile
+    var _rotOverlay = document.createElement('div');
+    _rotOverlay.id = '_rot';
+    _rotOverlay.innerHTML = '<div style="font-size:48px">📱➡️</div><div style="font-size:18px;margin-top:12px;letter-spacing:2px">TOURNE TON TÉLÉPHONE</div>';
+    _rotOverlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:#000;color:#4af;font-family:monospace;align-items:center;justify-content:center;flex-direction:column;text-align:center;';
+    document.body.appendChild(_rotOverlay);
+
+    // Scale the game canvas to fit the screen
     function _scaleGame() {
       const root = document.getElementById('root');
+      const ov = document.getElementById('_rot');
       if (!root) return;
       const sw = window.innerWidth, sh = window.innerHeight;
+      const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || sw < 900;
+      const isPortrait = sh > sw;
+      // Show rotate overlay on mobile portrait
+      if (ov) ov.style.display = (isMobile && isPortrait) ? 'flex' : 'none';
       const scale = Math.min(sw / 800, sh / 520);
       root.style.transform = 'scale(' + scale + ')';
-      // Fix: body needs explicit height so the scaled root is centered
       document.body.style.height = sh + 'px';
     }
     window.addEventListener('resize', _scaleGame);
-    window.addEventListener('orientationchange', function(){ setTimeout(_scaleGame, 200); });
-    // Run after React mounts
+    window.addEventListener('orientationchange', function(){ setTimeout(_scaleGame, 250); });
     setTimeout(_scaleGame, 300);
   </script>
 </body>
