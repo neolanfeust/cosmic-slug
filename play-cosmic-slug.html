@@ -1558,18 +1558,23 @@ function CosmicSlug() {
   }
 
   function TBtn({id, label, style, keyHint}) {
+    const [pressed, setPressed] = React.useState(false);
     return (
       <button
-        onPointerDown={e => { e.preventDefault(); touchBtn(id, true); }}
-        onPointerUp={e => { e.preventDefault(); touchBtn(id, false); }}
-        onPointerCancel={e => { e.preventDefault(); touchBtn(id, false); }}
+        onPointerDown={e => { e.preventDefault(); setPressed(true);  touchBtn(id, true); }}
+        onPointerUp={e =>   { e.preventDefault(); setPressed(false); touchBtn(id, false); }}
+        onPointerCancel={e =>{ e.preventDefault(); setPressed(false); touchBtn(id, false); }}
         style={{
           position:"absolute", width:46, height:46,
-          borderRadius:10, border:"1px solid rgba(255,255,255,0.28)",
-          background:"rgba(10,12,30,0.65)", color:"#fff",
+          borderRadius:10,
+          border: pressed ? "1px solid rgba(255,255,255,0.7)" : "1px solid rgba(255,255,255,0.18)",
+          background: pressed ? "rgba(80,120,255,0.55)" : "rgba(10,12,30,0.28)",
+          color:"#fff",
+          opacity: pressed ? 1 : 0.45,
           fontSize:15, display:"flex", flexDirection:"column",
           alignItems:"center", justifyContent:"center", gap:1,
           userSelect:"none", touchAction:"none", cursor:"pointer",
+          transition:"opacity 0.1s, background 0.1s",
           ...style
         }}
       >
@@ -2052,8 +2057,15 @@ _csRoot.render(React.createElement(CosmicSlug));
       // Show rotate overlay on mobile portrait
       if (ov) ov.style.display = (isMobile && isPortrait) ? 'flex' : 'none';
       const scale = Math.min(sw / 800, sh / 520);
+      const scaledW = 800 * scale, scaledH = 520 * scale;
+      // transform-origin top-left + manual margin = no clipping on any screen size
+      root.style.transformOrigin = 'top left';
       root.style.transform = 'scale(' + scale + ')';
-      document.body.style.height = sh + 'px';
+      root.style.marginLeft = ((sw - scaledW) / 2) + 'px';
+      root.style.marginTop  = ((sh - scaledH) / 2) + 'px';
+      // Disable body flex centering (we handle it manually above)
+      document.body.style.alignItems = 'flex-start';
+      document.body.style.justifyContent = 'flex-start';
     }
     window.addEventListener('resize', _scaleGame);
     window.addEventListener('orientationchange', function(){ setTimeout(_scaleGame, 250); });
