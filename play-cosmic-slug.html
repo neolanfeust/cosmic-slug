@@ -1567,10 +1567,10 @@ function CosmicSlug() {
         style={{
           position:"absolute", width:46, height:46,
           borderRadius:10,
-          border: pressed ? "1px solid rgba(255,255,255,0.7)" : "1px solid rgba(255,255,255,0.18)",
-          background: pressed ? "rgba(80,120,255,0.55)" : "rgba(10,12,30,0.28)",
+          border: pressed ? "1px solid rgba(255,255,255,0.9)" : "1px solid rgba(255,255,255,0.45)",
+          background: pressed ? "rgba(80,120,255,0.7)" : "rgba(10,12,30,0.55)",
           color:"#fff",
-          opacity: pressed ? 1 : 0.45,
+          opacity: pressed ? 1 : 0.78,
           fontSize:15, display:"flex", flexDirection:"column",
           alignItems:"center", justifyContent:"center", gap:1,
           userSelect:"none", touchAction:"none", cursor:"pointer",
@@ -2054,16 +2054,21 @@ _csRoot.render(React.createElement(CosmicSlug));
       const sw = window.innerWidth, sh = window.innerHeight;
       const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || sw < 900;
       const isPortrait = sh > sw;
-      // Show rotate overlay on mobile portrait
       if (ov) ov.style.display = (isMobile && isPortrait) ? 'flex' : 'none';
-      const scale = Math.min(sw / 800, sh / 520);
+      // En paysage sur mobile, screen.height donne la vraie hauteur physique
+      // sans la barre Chrome, ce qui évite de trop réduire le jeu
+      const physH = (!isPortrait && isMobile && screen && screen.height)
+        ? Math.min(screen.width, screen.height)   // petite dimension = hauteur paysage
+        : sh;
+      const scale = Math.min(sw / 800, physH / 520);
       const scaledW = 800 * scale, scaledH = 520 * scale;
-      // transform-origin top-left + manual margin = no clipping on any screen size
       root.style.transformOrigin = 'top left';
       root.style.transform = 'scale(' + scale + ')';
-      root.style.marginLeft = ((sw - scaledW) / 2) + 'px';
-      root.style.marginTop  = ((sh - scaledH) / 2) + 'px';
-      // Disable body flex centering (we handle it manually above)
+      // Centrer horizontalement sur la vraie largeur
+      root.style.marginLeft = Math.max(0, (sw - scaledW) / 2) + 'px';
+      // Centrer verticalement sur sh (viewport réel) — le haut du jeu peut
+      // être légèrement derrière la barre Chrome, c'est du fond noir, pas grave
+      root.style.marginTop  = Math.max(-40, (sh - scaledH) / 2) + 'px';
       document.body.style.alignItems = 'flex-start';
       document.body.style.justifyContent = 'flex-start';
     }
