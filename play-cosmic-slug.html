@@ -26,9 +26,7 @@
     #root {
       width: 800px; height: 520px;
       position: relative; overflow: hidden;
-    }
-    @media (max-width: 820px) {
-      #root { width: 100vw; height: 65vw; }
+      transform-origin: top center;
     }
     button { font-family: 'Courier New', monospace; }
   </style>
@@ -2036,6 +2034,20 @@ _csRoot.render(React.createElement(CosmicSlug));
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       });
     }
+    // Scale the game canvas to fit any screen size
+    function _scaleGame() {
+      const root = document.getElementById('root');
+      if (!root) return;
+      const sw = window.innerWidth, sh = window.innerHeight;
+      const scale = Math.min(sw / 800, sh / 520);
+      root.style.transform = 'scale(' + scale + ')';
+      // Fix: body needs explicit height so the scaled root is centered
+      document.body.style.height = sh + 'px';
+    }
+    window.addEventListener('resize', _scaleGame);
+    window.addEventListener('orientationchange', function(){ setTimeout(_scaleGame, 200); });
+    // Run after React mounts
+    setTimeout(_scaleGame, 300);
   </script>
 </body>
 </html>
