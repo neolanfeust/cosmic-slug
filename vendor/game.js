@@ -4740,14 +4740,14 @@ function CosmicSlug() {
       },
       style: {
         position: "absolute",
-        width: 46,
-        height: 46,
-        borderRadius: 10,
-        border: pressed ? "1px solid rgba(255,255,255,0.9)" : "1px solid rgba(255,255,255,0.45)",
-        background: pressed ? "rgba(80,120,255,0.7)" : "rgba(10,12,30,0.55)",
+        width: 40,
+        height: 40,
+        borderRadius: "50%",
+        border: pressed ? "1.5px solid rgba(255,255,255,0.75)" : "1.5px solid rgba(255,255,255,0.18)",
+        background: pressed ? "rgba(100,140,255,0.6)" : "rgba(15,18,40,0.38)",
         color: "#fff",
-        opacity: pressed ? 1 : 0.78,
-        fontSize: 15,
+        opacity: pressed ? 1 : 0.72,
+        fontSize: 14,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -4756,7 +4756,8 @@ function CosmicSlug() {
         userSelect: "none",
         touchAction: "none",
         cursor: "pointer",
-        transition: "opacity 0.1s, background 0.1s",
+        backdropFilter: "blur(3px)",
+        transition: "opacity 0.08s, background 0.08s, border-color 0.08s",
         ...style
       }
     }, /*#__PURE__*/React.createElement("span", {
@@ -5533,9 +5534,9 @@ function CosmicSlug() {
     style: {
       position: "absolute",
       bottom: 14,
-      left: 10,
-      width: 140,
-      height: 140,
+      left: 8,
+      width: 128,
+      height: 128,
       pointerEvents: "none"
     }
   }, /*#__PURE__*/React.createElement(TBtn, {
@@ -5544,12 +5545,11 @@ function CosmicSlug() {
     keyHint: "Z",
     style: {
       top: 0,
-      left: 47,
-      width: 46,
-      height: 44,
-      borderRadius: "10px 10px 4px 4px",
-      background: "rgba(100,160,255,0.18)",
-      border: "1px solid rgba(100,160,255,0.45)",
+      left: 44,
+      width: 40,
+      height: 40,
+      background: "rgba(100,160,255,0.14)",
+      border: "1.5px solid rgba(100,160,255,0.35)",
       pointerEvents: "auto"
     }
   }), /*#__PURE__*/React.createElement(TBtn, {
@@ -5559,32 +5559,31 @@ function CosmicSlug() {
     style: {
       top: 44,
       left: 0,
-      width: 46,
-      height: 46,
-      borderRadius: "10px 4px 4px 10px",
-      background: "rgba(255,255,255,0.1)",
+      width: 40,
+      height: 40,
+      background: "rgba(255,255,255,0.08)",
       pointerEvents: "auto"
     }
   }), /*#__PURE__*/React.createElement("div", {
     style: {
       position: "absolute",
       top: 44,
-      left: 47,
-      width: 46,
-      height: 46,
-      background: "rgba(255,255,255,0.04)",
-      border: "1px solid rgba(255,255,255,0.12)",
-      borderRadius: 4,
+      left: 44,
+      width: 40,
+      height: 40,
+      background: "rgba(255,255,255,0.03)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: "50%",
       display: "flex",
       alignItems: "center",
       justifyContent: "center"
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      width: 10,
-      height: 10,
+      width: 8,
+      height: 8,
       borderRadius: "50%",
-      background: "rgba(255,255,255,0.2)"
+      background: "rgba(255,255,255,0.15)"
     }
   })), /*#__PURE__*/React.createElement(TBtn, {
     id: "right",
@@ -5592,11 +5591,10 @@ function CosmicSlug() {
     keyHint: "D",
     style: {
       top: 44,
-      left: 94,
-      width: 46,
-      height: 46,
-      borderRadius: "4px 10px 10px 4px",
-      background: "rgba(255,255,255,0.1)",
+      left: 88,
+      width: 40,
+      height: 40,
+      background: "rgba(255,255,255,0.08)",
       pointerEvents: "auto"
     }
   }), /*#__PURE__*/React.createElement(TBtn, {
@@ -5604,13 +5602,12 @@ function CosmicSlug() {
     label: "\u25BC",
     keyHint: "S",
     style: {
-      top: 90,
-      left: 47,
-      width: 46,
-      height: 46,
-      borderRadius: "4px 4px 10px 10px",
-      background: "rgba(200,180,60,0.12)",
-      border: "1px solid rgba(200,180,60,0.35)",
+      top: 88,
+      left: 44,
+      width: 40,
+      height: 40,
+      background: "rgba(200,180,60,0.1)",
+      border: "1.5px solid rgba(200,180,60,0.28)",
       pointerEvents: "auto"
     }
   }), /*#__PURE__*/React.createElement(TBtn, {
@@ -5619,9 +5616,9 @@ function CosmicSlug() {
     keyHint: "SPACE",
     style: {
       top: 44,
-      left: 47,
-      width: 46,
-      height: 46,
+      left: 44,
+      width: 40,
+      height: 40,
       background: "transparent",
       border: "none",
       pointerEvents: "none",
@@ -5632,10 +5629,13 @@ function CosmicSlug() {
     label: "\u2605",
     keyHint: "F",
     style: {
-      bottom: 80,
-      right: 72,
-      background: "rgba(200,100,255,0.18)",
-      border: "1px solid rgba(200,100,255,0.45)",
+      bottom: 76,
+      right: 68,
+      width: 44,
+      height: 44,
+      borderRadius: "50%",
+      background: "rgba(180,80,255,0.14)",
+      border: "1.5px solid rgba(180,80,255,0.38)",
       pointerEvents: "auto"
     }
   }), /*#__PURE__*/React.createElement(TBtn, {
@@ -5643,10 +5643,13 @@ function CosmicSlug() {
     label: "\u26A1",
     keyHint: "E",
     style: {
-      bottom: 80,
-      right: 14,
-      background: "rgba(80,255,140,0.18)",
-      border: "1px solid rgba(80,255,140,0.45)",
+      bottom: 76,
+      right: 12,
+      width: 44,
+      height: 44,
+      borderRadius: "50%",
+      background: "rgba(60,230,120,0.14)",
+      border: "1.5px solid rgba(60,230,120,0.38)",
       pointerEvents: "auto"
     }
   }), /*#__PURE__*/React.createElement(TBtn, {
@@ -5654,10 +5657,13 @@ function CosmicSlug() {
     label: "\uD83D\uDCA3",
     keyHint: "A",
     style: {
-      bottom: 14,
-      right: 14,
-      background: "rgba(255,70,70,0.18)",
-      border: "1px solid rgba(255,70,70,0.45)",
+      bottom: 12,
+      right: 12,
+      width: 44,
+      height: 44,
+      borderRadius: "50%",
+      background: "rgba(255,60,60,0.14)",
+      border: "1.5px solid rgba(255,60,60,0.38)",
       pointerEvents: "auto"
     }
   }), /*#__PURE__*/React.createElement("button", {
