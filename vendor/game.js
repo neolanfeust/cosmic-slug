@@ -4779,42 +4779,44 @@ function CosmicSlug() {
   function VirtualJoystick() {
     const baseRef = React.useRef(null);
     const [knob, setKnob] = React.useState({x: 0, y: 0});
-    const ptId = React.useRef(null);
-    const MAX = 38;
-    function applyDir(dx, dy) {
-      const D = 10;
-      touchBtn("left",  dx < -D);
-      touchBtn("right", dx >  D);
-      touchBtn("up",    dy < -D);
-      touchBtn("down",  dy >  D);
+    const activeId = React.useRef(null);
+    const SIZE = 100;
+    const MAX_PX = 32;
+    const D_PX = 10;
+    function calc(e) {
+      const r = baseRef.current.getBoundingClientRect();
+      const cssScale = r.width / SIZE;
+      const dxPx = e.clientX - (r.left + r.width / 2);
+      const dyPx = e.clientY - (r.top + r.height / 2);
+      const a = Math.atan2(dyPx, dxPx);
+      const dist = Math.min(Math.sqrt(dxPx * dxPx + dyPx * dyPx), MAX_PX);
+      return {kx: Math.cos(a) * dist / cssScale, ky: Math.sin(a) * dist / cssScale, dxPx, dyPx};
+    }
+    function applyDir(dxPx, dyPx) {
+      touchBtn("left",  dxPx < -D_PX);
+      touchBtn("right", dxPx >  D_PX);
+      touchBtn("up",    dyPx < -D_PX);
+      touchBtn("down",  dyPx >  D_PX);
     }
     function onDown(e) {
-      if (ptId.current !== null) return;
+      if (activeId.current !== null) return;
       e.preventDefault();
-      ptId.current = e.pointerId;
+      activeId.current = e.pointerId;
       e.currentTarget.setPointerCapture(e.pointerId);
-      const r = baseRef.current.getBoundingClientRect();
-      const dx = e.clientX - (r.left + r.width / 2);
-      const dy = e.clientY - (r.top + r.height / 2);
-      const a = Math.atan2(dy, dx);
-      const c = Math.min(Math.sqrt(dx * dx + dy * dy), MAX);
-      setKnob({x: Math.cos(a) * c, y: Math.sin(a) * c});
-      applyDir(dx, dy);
+      const {kx, ky, dxPx, dyPx} = calc(e);
+      setKnob({x: kx, y: ky});
+      applyDir(dxPx, dyPx);
     }
     function onMove(e) {
-      if (e.pointerId !== ptId.current) return;
+      if (e.pointerId !== activeId.current) return;
       e.preventDefault();
-      const r = baseRef.current.getBoundingClientRect();
-      const dx = e.clientX - (r.left + r.width / 2);
-      const dy = e.clientY - (r.top + r.height / 2);
-      const a = Math.atan2(dy, dx);
-      const c = Math.min(Math.sqrt(dx * dx + dy * dy), MAX);
-      setKnob({x: Math.cos(a) * c, y: Math.sin(a) * c});
-      applyDir(dx, dy);
+      const {kx, ky, dxPx, dyPx} = calc(e);
+      setKnob({x: kx, y: ky});
+      applyDir(dxPx, dyPx);
     }
     function onUp(e) {
-      if (e.pointerId !== ptId.current) return;
-      ptId.current = null;
+      if (e.pointerId !== activeId.current) return;
+      activeId.current = null;
       setKnob({x: 0, y: 0});
       touchBtn("left", false);
       touchBtn("right", false);
@@ -4830,19 +4832,18 @@ function CosmicSlug() {
       onPointerCancel: onUp,
       style: {
         position: "absolute", bottom: 84, left: 8,
-        width: 120, height: 120, borderRadius: "50%",
-        background: "rgba(255,255,255,0.05)",
-        border: "1.5px solid rgba(255,255,255,0.13)",
-        backdropFilter: "blur(2px)",
+        width: SIZE, height: SIZE, borderRadius: "50%",
+        background: "rgba(255,255,255,0.06)",
+        border: "1.5px solid rgba(255,255,255,0.16)",
+        display: "flex", alignItems: "center", justifyContent: "center",
         touchAction: "none", userSelect: "none",
-        display: "flex", alignItems: "center", justifyContent: "center"
+        pointerEvents: "auto", zIndex: 10
       }
     }, /*#__PURE__*/React.createElement("div", {
       style: {
-        position: "absolute", width: 50, height: 50, borderRadius: "50%",
-        background: atCenter ? "rgba(140,170,255,0.28)" : "rgba(140,170,255,0.55)",
-        border: "1.5px solid rgba(180,210,255,0.45)",
-        backdropFilter: "blur(3px)",
+        position: "absolute", width: 36, height: 36, borderRadius: "50%",
+        background: atCenter ? "rgba(140,170,255,0.25)" : "rgba(140,170,255,0.55)",
+        border: "1.5px solid rgba(180,210,255,0.4)",
         transform: `translate(${knob.x}px,${knob.y}px)`,
         transition: atCenter ? "transform 0.12s" : "none",
         pointerEvents: "none"
@@ -5606,45 +5607,42 @@ function CosmicSlug() {
       pointerEvents: "none"
     }
   }, /*#__PURE__*/React.createElement(VirtualJoystick, null), /*#__PURE__*/React.createElement(TBtn, {
-    id: "ult",
-    label: "\u2605",
-    keyHint: "F",
-    style: {
-      bottom: 130,
-      right: 104,
-      width: 44,
-      height: 44,
-      borderRadius: "50%",
-      background: "rgba(180,80,255,0.14)",
-      border: "1.5px solid rgba(180,80,255,0.38)",
-      pointerEvents: "auto"
-    }
-  }), /*#__PURE__*/React.createElement(TBtn, {
     id: "shoot",
-    label: "\u26A1",
-    keyHint: "E",
+    label: "⚡",
     style: {
-      bottom: 130,
-      right: 52,
-      width: 44,
-      height: 44,
+      bottom: 80,
+      right: 60,
+      width: 42,
+      height: 42,
       borderRadius: "50%",
-      background: "rgba(60,230,120,0.14)",
-      border: "1.5px solid rgba(60,230,120,0.38)",
+      background: "rgba(60,230,120,0.10)",
+      border: "1.5px solid rgba(60,230,120,0.28)",
       pointerEvents: "auto"
     }
   }), /*#__PURE__*/React.createElement(TBtn, {
     id: "bomb",
-    label: "\uD83D\uDCA3",
-    keyHint: "A",
+    label: "💣",
     style: {
-      bottom: 84,
-      right: 52,
-      width: 44,
-      height: 44,
+      bottom: 118,
+      right: 94,
+      width: 38,
+      height: 38,
       borderRadius: "50%",
-      background: "rgba(255,60,60,0.14)",
-      border: "1.5px solid rgba(255,60,60,0.38)",
+      background: "rgba(255,60,60,0.09)",
+      border: "1.5px solid rgba(255,60,60,0.25)",
+      pointerEvents: "auto"
+    }
+  }), /*#__PURE__*/React.createElement(TBtn, {
+    id: "ult",
+    label: "★",
+    style: {
+      bottom: 82,
+      right: 110,
+      width: 36,
+      height: 36,
+      borderRadius: "50%",
+      background: "rgba(180,80,255,0.09)",
+      border: "1.5px solid rgba(180,80,255,0.25)",
       pointerEvents: "auto"
     }
   }), /*#__PURE__*/React.createElement("button", {
