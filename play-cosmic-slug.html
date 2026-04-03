@@ -2033,8 +2033,15 @@ _csRoot.render(React.createElement(CosmicSlug));
   </script>
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      // Reload the page when a new SW version takes over (gets fresh cached files)
+      var _swRefreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        if (!_swRefreshing) { _swRefreshing = true; window.location.reload(); }
+      });
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js').then(function(reg) {
+          reg.update(); // force immediate check for a new SW version
+        }).catch(function() {});
       });
     }
     // Rotate overlay for portrait mode on mobile
