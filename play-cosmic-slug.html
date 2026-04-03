@@ -1586,6 +1586,70 @@ function CosmicSlug() {
     );
   }
 
+  // ── Virtual joystick (replaces d-pad) ────────────────────────────────────────
+  function VirtualJoystick() {
+    const baseRef = React.useRef(null);
+    const [knob, setKnob] = React.useState({x:0, y:0});
+    const ptId = React.useRef(null);
+    const MAX = 38;
+    function applyDir(dx, dy) {
+      const D = 10;
+      touchBtn("left",  dx < -D);
+      touchBtn("right", dx >  D);
+      touchBtn("up",    dy < -D);
+      touchBtn("down",  dy >  D);
+    }
+    function onDown(e) {
+      if (ptId.current !== null) return;
+      e.preventDefault();
+      ptId.current = e.pointerId;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const r = baseRef.current.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width/2);
+      const dy = e.clientY - (r.top  + r.height/2);
+      const a = Math.atan2(dy, dx), c = Math.min(Math.sqrt(dx*dx+dy*dy), MAX);
+      setKnob({x: Math.cos(a)*c, y: Math.sin(a)*c});
+      applyDir(dx, dy);
+    }
+    function onMove(e) {
+      if (e.pointerId !== ptId.current) return;
+      e.preventDefault();
+      const r = baseRef.current.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width/2);
+      const dy = e.clientY - (r.top  + r.height/2);
+      const a = Math.atan2(dy, dx), c = Math.min(Math.sqrt(dx*dx+dy*dy), MAX);
+      setKnob({x: Math.cos(a)*c, y: Math.sin(a)*c});
+      applyDir(dx, dy);
+    }
+    function onUp(e) {
+      if (e.pointerId !== ptId.current) return;
+      ptId.current = null;
+      setKnob({x:0, y:0});
+      touchBtn("left",false); touchBtn("right",false);
+      touchBtn("up",false);   touchBtn("down",false);
+    }
+    const atCenter = knob.x===0 && knob.y===0;
+    return (
+      <div ref={baseRef}
+        onPointerDown={onDown} onPointerMove={onMove}
+        onPointerUp={onUp} onPointerCancel={onUp}
+        style={{position:"absolute",bottom:84,left:8,width:120,height:120,
+          borderRadius:"50%",background:"rgba(255,255,255,0.05)",
+          border:"1.5px solid rgba(255,255,255,0.13)",backdropFilter:"blur(2px)",
+          touchAction:"none",userSelect:"none",
+          display:"flex",alignItems:"center",justifyContent:"center"}}
+      >
+        <div style={{position:"absolute",width:50,height:50,borderRadius:"50%",
+          background: atCenter ? "rgba(140,170,255,0.28)" : "rgba(140,170,255,0.55)",
+          border:"1.5px solid rgba(180,210,255,0.45)",backdropFilter:"blur(3px)",
+          transform:`translate(${knob.x}px,${knob.y}px)`,
+          transition: atCenter ? "transform 0.12s" : "none",
+          pointerEvents:"none"
+        }}/>
+      </div>
+    );
+  }
+
   // ── shared styles ────────────────────────────────────────────────────────────
   const screenStyle = {
     position:"absolute", inset:0, display:"flex", flexDirection:"column",
@@ -1940,72 +2004,29 @@ function CosmicSlug() {
       {/* Touch overlay */}
       <div style={{position:"absolute",inset:0,pointerEvents:"none"}}>
 
-        {/* ── D-pad cross ──────────────────────────────────────────── */}
-        <div style={{position:"absolute",bottom:84,left:8,width:128,height:128,pointerEvents:"none"}}>
-          {/* Up */}
-          <TBtn id="up" label="▲" keyHint="Z" style={{
-            top:0, left:44, width:40, height:40,
-            background:"rgba(100,160,255,0.14)",
-            border:"1.5px solid rgba(100,160,255,0.35)",
-            pointerEvents:"auto"
-          }} />
-          {/* Left */}
-          <TBtn id="left" label="◀" keyHint="Q" style={{
-            top:44, left:0, width:40, height:40,
-            background:"rgba(255,255,255,0.08)",
-            pointerEvents:"auto"
-          }} />
-          {/* Centre (décoratif) */}
-          <div style={{
-            position:"absolute", top:44, left:44,
-            width:40, height:40,
-            background:"rgba(255,255,255,0.03)",
-            border:"1px solid rgba(255,255,255,0.08)",
-            borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center"
-          }}>
-            <div style={{width:8,height:8,borderRadius:"50%",background:"rgba(255,255,255,0.15)"}}/>
-          </div>
-          {/* Right */}
-          <TBtn id="right" label="▶" keyHint="D" style={{
-            top:44, left:88, width:40, height:40,
-            background:"rgba(255,255,255,0.08)",
-            pointerEvents:"auto"
-          }} />
-          {/* Down */}
-          <TBtn id="down" label="▼" keyHint="S" style={{
-            top:88, left:44, width:40, height:40,
-            background:"rgba(200,180,60,0.1)",
-            border:"1.5px solid rgba(200,180,60,0.28)",
-            pointerEvents:"auto"
-          }} />
-          {/* Jump (hidden, keeps mapping) */}
-          <TBtn id="jump" label="⬆" keyHint="SPACE" style={{
-            top:44, left:44, width:40, height:40,
-            background:"transparent", border:"none",
-            pointerEvents:"none", opacity:0
-          }} />
-        </div>
+        {/* ── Virtual joystick (left thumb) ────────────────────────── */}
+        <VirtualJoystick />
 
-        {/* ── Action buttons ───────────────────────────────────────── */}
+        {/* ── Action buttons (right thumb) — inset from edge for safe area ── */}
         <TBtn id="ult"   label="★"  keyHint="F" style={{
-          bottom:130, right:68, width:44, height:44,
+          bottom:130, right:104, width:44, height:44,
           borderRadius:"50%",
-          background:"rgba(180,80,255,0.14)",
-          border:"1.5px solid rgba(180,80,255,0.38)",
+          background:"rgba(180,80,255,0.12)",
+          border:"1.5px solid rgba(180,80,255,0.35)",
           pointerEvents:"auto"
         }} />
         <TBtn id="shoot" label="⚡" keyHint="E" style={{
-          bottom:130, right:12, width:44, height:44,
+          bottom:130, right:52, width:44, height:44,
           borderRadius:"50%",
-          background:"rgba(60,230,120,0.14)",
-          border:"1.5px solid rgba(60,230,120,0.38)",
+          background:"rgba(60,230,120,0.12)",
+          border:"1.5px solid rgba(60,230,120,0.35)",
           pointerEvents:"auto"
         }} />
         <TBtn id="bomb"  label="💣" keyHint="A" style={{
-          bottom:84, right:12, width:44, height:44,
+          bottom:84, right:52, width:44, height:44,
           borderRadius:"50%",
-          background:"rgba(255,60,60,0.14)",
-          border:"1.5px solid rgba(255,60,60,0.38)",
+          background:"rgba(255,60,60,0.12)",
+          border:"1.5px solid rgba(255,60,60,0.35)",
           pointerEvents:"auto"
         }} />
 
@@ -2063,11 +2084,10 @@ _csRoot.render(React.createElement(CosmicSlug));
       if (ov) ov.style.display = (isMobile && isPortrait) ? 'flex' : 'none';
       var scale, marginLeft, marginTop;
       if (isMobile && !isPortrait) {
-        // Cover: fill full width — no black bars on the sides.
-        // The game is taller than most phone screens; center-crop vertically.
-        // Touch controls are repositioned so they stay inside the visible zone.
-        scale = sw / 800;
-        marginLeft = 0;
+        // Cover: fill screen width with a 2.5% margin on each side so content
+        // clears iPhone rounded corners / safe-area insets (no hard clipping).
+        scale = (sw / 800) * 0.975;
+        marginLeft = (sw - 800 * scale) / 2;
         marginTop = (sh - 520 * scale) / 2;   // can be negative (crops top+bottom)
       } else {
         // Desktop / portrait: uniform fit — no cropping.

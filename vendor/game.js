@@ -4775,6 +4775,81 @@ function CosmicSlug() {
     }, keyHint));
   }
 
+  // ── Virtual joystick (replaces d-pad) ────────────────────────────────────────
+  function VirtualJoystick() {
+    const baseRef = React.useRef(null);
+    const [knob, setKnob] = React.useState({x: 0, y: 0});
+    const ptId = React.useRef(null);
+    const MAX = 38;
+    function applyDir(dx, dy) {
+      const D = 10;
+      touchBtn("left",  dx < -D);
+      touchBtn("right", dx >  D);
+      touchBtn("up",    dy < -D);
+      touchBtn("down",  dy >  D);
+    }
+    function onDown(e) {
+      if (ptId.current !== null) return;
+      e.preventDefault();
+      ptId.current = e.pointerId;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const r = baseRef.current.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2);
+      const dy = e.clientY - (r.top + r.height / 2);
+      const a = Math.atan2(dy, dx);
+      const c = Math.min(Math.sqrt(dx * dx + dy * dy), MAX);
+      setKnob({x: Math.cos(a) * c, y: Math.sin(a) * c});
+      applyDir(dx, dy);
+    }
+    function onMove(e) {
+      if (e.pointerId !== ptId.current) return;
+      e.preventDefault();
+      const r = baseRef.current.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2);
+      const dy = e.clientY - (r.top + r.height / 2);
+      const a = Math.atan2(dy, dx);
+      const c = Math.min(Math.sqrt(dx * dx + dy * dy), MAX);
+      setKnob({x: Math.cos(a) * c, y: Math.sin(a) * c});
+      applyDir(dx, dy);
+    }
+    function onUp(e) {
+      if (e.pointerId !== ptId.current) return;
+      ptId.current = null;
+      setKnob({x: 0, y: 0});
+      touchBtn("left", false);
+      touchBtn("right", false);
+      touchBtn("up", false);
+      touchBtn("down", false);
+    }
+    const atCenter = knob.x === 0 && knob.y === 0;
+    return /*#__PURE__*/React.createElement("div", {
+      ref: baseRef,
+      onPointerDown: onDown,
+      onPointerMove: onMove,
+      onPointerUp: onUp,
+      onPointerCancel: onUp,
+      style: {
+        position: "absolute", bottom: 84, left: 8,
+        width: 120, height: 120, borderRadius: "50%",
+        background: "rgba(255,255,255,0.05)",
+        border: "1.5px solid rgba(255,255,255,0.13)",
+        backdropFilter: "blur(2px)",
+        touchAction: "none", userSelect: "none",
+        display: "flex", alignItems: "center", justifyContent: "center"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: "absolute", width: 50, height: 50, borderRadius: "50%",
+        background: atCenter ? "rgba(140,170,255,0.28)" : "rgba(140,170,255,0.55)",
+        border: "1.5px solid rgba(180,210,255,0.45)",
+        backdropFilter: "blur(3px)",
+        transform: `translate(${knob.x}px,${knob.y}px)`,
+        transition: atCenter ? "transform 0.12s" : "none",
+        pointerEvents: "none"
+      }
+    }));
+  }
+
   // ── shared styles ────────────────────────────────────────────────────────────
   const screenStyle = {
     position: "absolute",
@@ -5530,107 +5605,13 @@ function CosmicSlug() {
       inset: 0,
       pointerEvents: "none"
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      bottom: 84,
-      left: 8,
-      width: 128,
-      height: 128,
-      pointerEvents: "none"
-    }
-  }, /*#__PURE__*/React.createElement(TBtn, {
-    id: "up",
-    label: "\u25B2",
-    keyHint: "Z",
-    style: {
-      top: 0,
-      left: 44,
-      width: 40,
-      height: 40,
-      background: "rgba(100,160,255,0.14)",
-      border: "1.5px solid rgba(100,160,255,0.35)",
-      pointerEvents: "auto"
-    }
-  }), /*#__PURE__*/React.createElement(TBtn, {
-    id: "left",
-    label: "\u25C0",
-    keyHint: "Q",
-    style: {
-      top: 44,
-      left: 0,
-      width: 40,
-      height: 40,
-      background: "rgba(255,255,255,0.08)",
-      pointerEvents: "auto"
-    }
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "absolute",
-      top: 44,
-      left: 44,
-      width: 40,
-      height: 40,
-      background: "rgba(255,255,255,0.03)",
-      border: "1px solid rgba(255,255,255,0.08)",
-      borderRadius: "50%",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 8,
-      height: 8,
-      borderRadius: "50%",
-      background: "rgba(255,255,255,0.15)"
-    }
-  })), /*#__PURE__*/React.createElement(TBtn, {
-    id: "right",
-    label: "\u25B6",
-    keyHint: "D",
-    style: {
-      top: 44,
-      left: 88,
-      width: 40,
-      height: 40,
-      background: "rgba(255,255,255,0.08)",
-      pointerEvents: "auto"
-    }
-  }), /*#__PURE__*/React.createElement(TBtn, {
-    id: "down",
-    label: "\u25BC",
-    keyHint: "S",
-    style: {
-      top: 88,
-      left: 44,
-      width: 40,
-      height: 40,
-      background: "rgba(200,180,60,0.1)",
-      border: "1.5px solid rgba(200,180,60,0.28)",
-      pointerEvents: "auto"
-    }
-  }), /*#__PURE__*/React.createElement(TBtn, {
-    id: "jump",
-    label: "\u2B06",
-    keyHint: "SPACE",
-    style: {
-      top: 44,
-      left: 44,
-      width: 40,
-      height: 40,
-      background: "transparent",
-      border: "none",
-      pointerEvents: "none",
-      opacity: 0
-    }
-  })), /*#__PURE__*/React.createElement(TBtn, {
+  }, /*#__PURE__*/React.createElement(VirtualJoystick, null), /*#__PURE__*/React.createElement(TBtn, {
     id: "ult",
     label: "\u2605",
     keyHint: "F",
     style: {
       bottom: 130,
-      right: 68,
+      right: 104,
       width: 44,
       height: 44,
       borderRadius: "50%",
@@ -5644,7 +5625,7 @@ function CosmicSlug() {
     keyHint: "E",
     style: {
       bottom: 130,
-      right: 12,
+      right: 52,
       width: 44,
       height: 44,
       borderRadius: "50%",
@@ -5658,7 +5639,7 @@ function CosmicSlug() {
     keyHint: "A",
     style: {
       bottom: 84,
-      right: 12,
+      right: 52,
       width: 44,
       height: 44,
       borderRadius: "50%",
