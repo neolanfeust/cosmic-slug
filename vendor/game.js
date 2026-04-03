@@ -5533,7 +5533,7 @@ function CosmicSlug() {
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       position: "absolute",
-      bottom: 14,
+      bottom: 84,
       left: 8,
       width: 128,
       height: 128,
@@ -5629,7 +5629,7 @@ function CosmicSlug() {
     label: "\u2605",
     keyHint: "F",
     style: {
-      bottom: 76,
+      bottom: 130,
       right: 68,
       width: 44,
       height: 44,
@@ -5643,7 +5643,7 @@ function CosmicSlug() {
     label: "\u26A1",
     keyHint: "E",
     style: {
-      bottom: 76,
+      bottom: 130,
       right: 12,
       width: 44,
       height: 44,
@@ -5657,7 +5657,7 @@ function CosmicSlug() {
     label: "\uD83D\uDCA3",
     keyHint: "A",
     style: {
-      bottom: 12,
+      bottom: 84,
       right: 12,
       width: 44,
       height: 44,

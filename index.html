@@ -1941,7 +1941,7 @@ function CosmicSlug() {
       <div style={{position:"absolute",inset:0,pointerEvents:"none"}}>
 
         {/* ── D-pad cross ──────────────────────────────────────────── */}
-        <div style={{position:"absolute",bottom:14,left:8,width:128,height:128,pointerEvents:"none"}}>
+        <div style={{position:"absolute",bottom:84,left:8,width:128,height:128,pointerEvents:"none"}}>
           {/* Up */}
           <TBtn id="up" label="▲" keyHint="Z" style={{
             top:0, left:44, width:40, height:40,
@@ -1988,21 +1988,21 @@ function CosmicSlug() {
 
         {/* ── Action buttons ───────────────────────────────────────── */}
         <TBtn id="ult"   label="★"  keyHint="F" style={{
-          bottom:76, right:68, width:44, height:44,
+          bottom:130, right:68, width:44, height:44,
           borderRadius:"50%",
           background:"rgba(180,80,255,0.14)",
           border:"1.5px solid rgba(180,80,255,0.38)",
           pointerEvents:"auto"
         }} />
         <TBtn id="shoot" label="⚡" keyHint="E" style={{
-          bottom:76, right:12, width:44, height:44,
+          bottom:130, right:12, width:44, height:44,
           borderRadius:"50%",
           background:"rgba(60,230,120,0.14)",
           border:"1.5px solid rgba(60,230,120,0.38)",
           pointerEvents:"auto"
         }} />
         <TBtn id="bomb"  label="💣" keyHint="A" style={{
-          bottom:12, right:12, width:44, height:44,
+          bottom:84, right:12, width:44, height:44,
           borderRadius:"50%",
           background:"rgba(255,60,60,0.14)",
           border:"1.5px solid rgba(255,60,60,0.38)",
@@ -2044,30 +2044,35 @@ _csRoot.render(React.createElement(CosmicSlug));
     _rotOverlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:#000;color:#4af;font-family:monospace;align-items:center;justify-content:center;flex-direction:column;text-align:center;';
     document.body.appendChild(_rotOverlay);
 
-    // Scale the game to fit the screen, using visualViewport for accurate dims
+    // Scale the game to fill the screen
     function _scaleGame() {
       const root = document.getElementById('root');
       const ov = document.getElementById('_rot');
       if (!root) return;
-      // visualViewport excludes browser chrome (URL bar, keyboard, nav bar)
-      const vvp = window.visualViewport;
-      const sw = vvp ? Math.round(vvp.width)  : window.innerWidth;
-      const sh = vvp ? Math.round(vvp.height) : window.innerHeight;
+      const sw = window.innerWidth;
+      const sh = window.innerHeight;
       const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || sw < 900;
       const isPortrait = sh > sw;
       if (ov) ov.style.display = (isMobile && isPortrait) ? 'flex' : 'none';
-      const scale = Math.min(sw / 800, sh / 520);
-      const scaledW = 800 * scale, scaledH = 520 * scale;
+      var scale, marginLeft, marginTop;
+      if (isMobile && !isPortrait) {
+        // Cover: fill full width — no black bars on the sides.
+        // The game is taller than most phone screens; center-crop vertically.
+        // Touch controls are repositioned so they stay inside the visible zone.
+        scale = sw / 800;
+        marginLeft = 0;
+        marginTop = (sh - 520 * scale) / 2;   // can be negative (crops top+bottom)
+      } else {
+        // Desktop / portrait: uniform fit — no cropping.
+        scale = Math.min(sw / 800, sh / 520);
+        marginLeft = (sw - 800 * scale) / 2;
+        marginTop  = (sh - 520 * scale) / 2;
+      }
       root.style.transform = 'scale(' + scale + ')';
-      root.style.marginLeft = Math.max(0, (sw - scaledW) / 2) + 'px';
-      root.style.marginTop  = Math.max(0, (sh - scaledH) / 2) + 'px';
+      root.style.marginLeft = marginLeft + 'px';
+      root.style.marginTop  = marginTop  + 'px';
     }
-    // visualViewport fires on chrome show/hide (address bar, keyboard)
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', _scaleGame);
-    } else {
-      window.addEventListener('resize', _scaleGame);
-    }
+    window.addEventListener('resize', _scaleGame);
     window.addEventListener('orientationchange', function(){ setTimeout(_scaleGame, 300); });
     document.addEventListener('fullscreenchange', _scaleGame);
     // In browser mode, auto-request fullscreen on first tap to remove chrome
