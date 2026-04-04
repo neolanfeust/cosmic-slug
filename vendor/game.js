@@ -5659,7 +5659,19 @@ function CosmicSlug() {
       border: "1.5px solid rgba(180,80,255,0.22)",
       pointerEvents: "auto"
     }
-  }), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      bottom: 4,
+      left: "50%",
+      transform: "translateX(-50%)",
+      fontSize: 9,
+      color: "rgba(255,255,255,0.22)",
+      fontFamily: "'Courier New',monospace",
+      pointerEvents: "none",
+      letterSpacing: 1
+    }
+  }, "v12"), /*#__PURE__*/React.createElement("button", {
     onPointerDown: e => {
       e.preventDefault();
       const next = !pausedRef.current;

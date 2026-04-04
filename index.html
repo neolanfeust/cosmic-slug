@@ -2048,6 +2048,11 @@ function CosmicSlug() {
           pointerEvents:"auto"
         }} />
 
+        {/* ── Version indicator ───────────────────────────────────── */}
+        <div style={{position:"absolute",bottom:4,left:"50%",transform:"translateX(-50%)",
+          fontSize:9,color:"rgba(255,255,255,0.22)",fontFamily:"'Courier New',monospace",
+          pointerEvents:"none",letterSpacing:1}}>v12</div>
+
         {/* ── Pause ────────────────────────────────────────────────── */}
         <button
           onPointerDown={e => { e.preventDefault(); const next=!pausedRef.current; pausedRef.current=next; setPaused(pv=>!pv); if(next)pauseBGMusic();else resumeBGMusic(); }}
@@ -2071,15 +2076,33 @@ const _csRoot = ReactDOM.createRoot(document.getElementById("root"));
 _csRoot.render(React.createElement(CosmicSlug));
   </script>
   <script>
+    var APP_VERSION = 'v12';
     if ('serviceWorker' in navigator) {
-      // Reload the page when a new SW version takes over (gets fresh cached files)
       var _swRefreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', function() {
         if (!_swRefreshing) { _swRefreshing = true; window.location.reload(); }
       });
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js').then(function(reg) {
-          reg.update(); // force immediate check for a new SW version
+        // Unregister ALL old service workers, then re-register with version param
+        // This breaks stale caches that prevent updates from being detected
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          var unregPromises = regs.map(function(r) { return r.unregister(); });
+          return Promise.all(unregPromises);
+        }).then(function() {
+          return navigator.serviceWorker.register('./sw.js?v=12');
+        }).then(function(reg) {
+          reg.update();
+          // If a waiting SW exists, tell it to take over immediately
+          if (reg.waiting) { reg.waiting.postMessage({type:'SKIP_WAITING'}); }
+          reg.addEventListener('updatefound', function() {
+            var newWorker = reg.installing;
+            if (!newWorker) return;
+            newWorker.addEventListener('statechange', function() {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                newWorker.postMessage({type:'SKIP_WAITING'});
+              }
+            });
+          });
         }).catch(function() {});
       });
     }
