@@ -1550,7 +1550,7 @@ function CosmicSlug() {
     const t = touchActive.current;
     keys.current["ArrowLeft"]  = !!(t["left"]);
     keys.current["ArrowRight"] = !!(t["right"]);
-    keys.current[" "]          = !!(t["jump"]);
+    keys.current[" "]          = !!(t["jump"]) || !!(t["up"]);
     keys.current["ArrowUp"]    = !!(t["up"]);
     keys.current["ArrowDown"]  = !!(t["down"]);
     keys.current["e"]          = !!(t["shoot"]);
@@ -2013,29 +2013,38 @@ function CosmicSlug() {
         {/* ── Virtual joystick (left thumb) ────────────────────────── */}
         <VirtualJoystick />
 
-        {/* ── Action buttons (right thumb) — arc layout for ergonomics ── */}
-        {/* shoot = main action, lowest-right (most accessible) */}
+        {/* ── Action buttons (right thumb) — gamepad-style layout ── */}
+        {/* jump = primary (like A button) — biggest, bottom-right */}
+        <TBtn id="jump" label="△" style={{
+          bottom:76, right:56, width:50, height:50,
+          borderRadius:"50%",
+          background:"rgba(80,180,255,0.13)",
+          border:"2px solid rgba(80,180,255,0.35)",
+          fontSize:18,
+          pointerEvents:"auto"
+        }} />
+        {/* shoot = above-left of jump */}
         <TBtn id="shoot" label="⚡" style={{
-          bottom:80, right:60, width:42, height:42,
+          bottom:122, right:100, width:40, height:40,
           borderRadius:"50%",
           background:"rgba(60,230,120,0.10)",
           border:"1.5px solid rgba(60,230,120,0.28)",
           pointerEvents:"auto"
         }} />
-        {/* bomb = secondary, above-left of shoot */}
+        {/* bomb = directly above jump */}
         <TBtn id="bomb"  label="💣" style={{
-          bottom:118, right:94, width:38, height:38,
+          bottom:130, right:56, width:38, height:38,
           borderRadius:"50%",
           background:"rgba(255,60,60,0.09)",
           border:"1.5px solid rgba(255,60,60,0.25)",
           pointerEvents:"auto"
         }} />
-        {/* ult = rare, left of shoot, same row */}
+        {/* ult = top-left of cluster, smallest */}
         <TBtn id="ult"   label="★" style={{
-          bottom:82, right:110, width:36, height:36,
+          bottom:122, right:140, width:34, height:34,
           borderRadius:"50%",
           background:"rgba(180,80,255,0.09)",
-          border:"1.5px solid rgba(180,80,255,0.25)",
+          border:"1.5px solid rgba(180,80,255,0.22)",
           pointerEvents:"auto"
         }} />
 

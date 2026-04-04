@@ -4708,7 +4708,7 @@ function CosmicSlug() {
     const t = touchActive.current;
     keys.current["ArrowLeft"] = !!t["left"];
     keys.current["ArrowRight"] = !!t["right"];
-    keys.current[" "] = !!t["jump"];
+    keys.current[" "] = !!t["jump"] || !!t["up"];
     keys.current["ArrowUp"] = !!t["up"];
     keys.current["ArrowDown"] = !!t["down"];
     keys.current["e"] = !!t["shoot"];
@@ -5607,13 +5607,27 @@ function CosmicSlug() {
       pointerEvents: "none"
     }
   }, /*#__PURE__*/React.createElement(VirtualJoystick, null), /*#__PURE__*/React.createElement(TBtn, {
+    id: "jump",
+    label: "△",
+    style: {
+      bottom: 76,
+      right: 56,
+      width: 50,
+      height: 50,
+      borderRadius: "50%",
+      background: "rgba(80,180,255,0.13)",
+      border: "2px solid rgba(80,180,255,0.35)",
+      fontSize: 18,
+      pointerEvents: "auto"
+    }
+  }), /*#__PURE__*/React.createElement(TBtn, {
     id: "shoot",
     label: "⚡",
     style: {
-      bottom: 80,
-      right: 60,
-      width: 42,
-      height: 42,
+      bottom: 122,
+      right: 100,
+      width: 40,
+      height: 40,
       borderRadius: "50%",
       background: "rgba(60,230,120,0.10)",
       border: "1.5px solid rgba(60,230,120,0.28)",
@@ -5623,8 +5637,8 @@ function CosmicSlug() {
     id: "bomb",
     label: "💣",
     style: {
-      bottom: 118,
-      right: 94,
+      bottom: 130,
+      right: 56,
       width: 38,
       height: 38,
       borderRadius: "50%",
@@ -5636,13 +5650,13 @@ function CosmicSlug() {
     id: "ult",
     label: "★",
     style: {
-      bottom: 82,
-      right: 110,
-      width: 36,
-      height: 36,
+      bottom: 122,
+      right: 140,
+      width: 34,
+      height: 34,
       borderRadius: "50%",
       background: "rgba(180,80,255,0.09)",
-      border: "1.5px solid rgba(180,80,255,0.25)",
+      border: "1.5px solid rgba(180,80,255,0.22)",
       pointerEvents: "auto"
     }
   }), /*#__PURE__*/React.createElement("button", {
