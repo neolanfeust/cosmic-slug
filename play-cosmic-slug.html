@@ -2214,59 +2214,61 @@ function CosmicSlug() {
       {/* Touch overlay */}
       <div style={{position:"absolute",inset:0,pointerEvents:"none"}}>
 
-        {/* ── Virtual joystick (left thumb) ────────────────────────── */}
-        <VirtualJoystick />
+        {touchDevice && <>
+          {/* ── Virtual joystick (left thumb) ────────────────────────── */}
+          <VirtualJoystick />
 
-        {/* ── Action buttons — diamond layout (ABXY-style), right thumb ── */}
-        {/* SHOOT (B) — rightmost, primary attack — biggest */}
-        <TBtn id="shoot" label="⚡" keyHint="E" style={{
-          bottom:92, right:14, width:54, height:54,
-          borderRadius:"50%",
-          background:"rgba(60,230,120,0.18)",
-          border:"2px solid rgba(60,230,120,0.45)",
-          fontSize:18,
-          pointerEvents:"auto"
-        }} />
-        {/* JUMP (A) — bottom, primary move */}
-        <TBtn id="jump" label="↑" keyHint="SPACE" style={{
-          bottom:38, right:70, width:52, height:52,
-          borderRadius:"50%",
-          background:"rgba(80,180,255,0.18)",
-          border:"2px solid rgba(80,180,255,0.45)",
-          fontSize:20, fontWeight:900,
-          pointerEvents:"auto"
-        }} />
-        {/* BOMB (X) — left of cluster */}
-        <TBtn id="bomb"  label="💣" keyHint="A" style={{
-          bottom:92, right:126, width:46, height:46,
-          borderRadius:"50%",
-          background:"rgba(255,90,90,0.16)",
-          border:"2px solid rgba(255,90,90,0.38)",
-          pointerEvents:"auto"
-        }} />
-        {/* ULT (Y) — top, special */}
-        <TBtn id="ult"   label="★" keyHint="F" style={{
-          bottom:146, right:70, width:46, height:46,
-          borderRadius:"50%",
-          background:"rgba(180,80,255,0.16)",
-          border:"2px solid rgba(180,80,255,0.4)",
-          fontSize:18,
-          pointerEvents:"auto"
-        }} />
-        {/* TP — only for void class, below joystick on left */}
-        {selCls === "void_c" && <TBtn id="tp" label="⟐" keyHint="L" style={{
-          bottom:46, left:126, width:42, height:42,
-          borderRadius:"50%",
-          background:"rgba(200,110,255,0.16)",
-          border:"2px solid rgba(200,110,255,0.4)",
-          fontSize:16,
-          pointerEvents:"auto"
-        }} />}
+          {/* ── Action buttons — diamond layout (ABXY-style), right thumb ── */}
+          {/* SHOOT (B) — rightmost, primary attack — biggest */}
+          <TBtn id="shoot" label="⚡" keyHint="E" style={{
+            bottom:92, right:14, width:54, height:54,
+            borderRadius:"50%",
+            background:"rgba(60,230,120,0.18)",
+            border:"2px solid rgba(60,230,120,0.45)",
+            fontSize:18,
+            pointerEvents:"auto"
+          }} />
+          {/* JUMP (A) — bottom, primary move */}
+          <TBtn id="jump" label="↑" keyHint="SPACE" style={{
+            bottom:38, right:70, width:52, height:52,
+            borderRadius:"50%",
+            background:"rgba(80,180,255,0.18)",
+            border:"2px solid rgba(80,180,255,0.45)",
+            fontSize:20, fontWeight:900,
+            pointerEvents:"auto"
+          }} />
+          {/* BOMB (X) — left of cluster */}
+          <TBtn id="bomb"  label="💣" keyHint="A" style={{
+            bottom:92, right:126, width:46, height:46,
+            borderRadius:"50%",
+            background:"rgba(255,90,90,0.16)",
+            border:"2px solid rgba(255,90,90,0.38)",
+            pointerEvents:"auto"
+          }} />
+          {/* ULT (Y) — top, special */}
+          <TBtn id="ult"   label="★" keyHint="F" style={{
+            bottom:146, right:70, width:46, height:46,
+            borderRadius:"50%",
+            background:"rgba(180,80,255,0.16)",
+            border:"2px solid rgba(180,80,255,0.4)",
+            fontSize:18,
+            pointerEvents:"auto"
+          }} />
+          {/* TP — only for void class, below joystick on left */}
+          {selCls === "void_c" && <TBtn id="tp" label="⟐" keyHint="L" style={{
+            bottom:46, left:126, width:42, height:42,
+            borderRadius:"50%",
+            background:"rgba(200,110,255,0.16)",
+            border:"2px solid rgba(200,110,255,0.4)",
+            fontSize:16,
+            pointerEvents:"auto"
+          }} />}
+        </>}
 
         {/* ── Version indicator ───────────────────────────────────── */}
         <div style={{position:"absolute",bottom:4,left:"50%",transform:"translateX(-50%)",
           fontSize:9,color:"rgba(255,255,255,0.22)",fontFamily:"'Courier New',monospace",
-          pointerEvents:"none",letterSpacing:1}}>v14</div>
+          pointerEvents:"none",letterSpacing:1}}>v15</div>
 
         {/* ── Pause ────────────────────────────────────────────────── */}
         <button
@@ -2291,7 +2293,7 @@ const _csRoot = ReactDOM.createRoot(document.getElementById("root"));
 _csRoot.render(React.createElement(CosmicSlug));
   </script>
   <script>
-    var APP_VERSION = 'v14';
+    var APP_VERSION = 'v15';
     if ('serviceWorker' in navigator) {
       var _swRefreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', function() {
@@ -2304,7 +2306,7 @@ _csRoot.render(React.createElement(CosmicSlug));
           var unregPromises = regs.map(function(r) { return r.unregister(); });
           return Promise.all(unregPromises);
         }).then(function() {
-          return navigator.serviceWorker.register('./sw.js?v=14');
+          return navigator.serviceWorker.register('./sw.js?v=15');
         }).then(function(reg) {
           reg.update();
           // If a waiting SW exists, tell it to take over immediately
@@ -2338,19 +2340,10 @@ _csRoot.render(React.createElement(CosmicSlug));
       const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || sw < 900;
       const isPortrait = sh > sw;
       if (ov) ov.style.display = (isMobile && isPortrait) ? 'flex' : 'none';
-      var scale, marginLeft, marginTop;
-      if (isMobile && !isPortrait) {
-        // Fit: scale so the full 800x520 stays on screen — HUD must not be cropped.
-        // Small 3% padding from edges for notch / home indicator safety.
-        scale = Math.min(sw / 800, sh / 520) * 0.97;
-        marginLeft = (sw - 800 * scale) / 2;
-        marginTop  = (sh - 520 * scale) / 2;
-      } else {
-        // Desktop / portrait: uniform fit — no cropping.
-        scale = Math.min(sw / 800, sh / 520);
-        marginLeft = (sw - 800 * scale) / 2;
-        marginTop  = (sh - 520 * scale) / 2;
-      }
+      // Uniform fit — no cropping. Full screen coverage on mobile.
+      const scale = Math.min(sw / 800, sh / 520);
+      const marginLeft = (sw - 800 * scale) / 2;
+      const marginTop  = (sh - 520 * scale) / 2;
       root.style.transform = 'scale(' + scale + ')';
       root.style.marginLeft = marginLeft + 'px';
       root.style.marginTop  = marginTop  + 'px';
