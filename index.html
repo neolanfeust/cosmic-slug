@@ -81,14 +81,36 @@ const ANOMALIES = [
   { id:"aura",        icon:"@", name:"Aura Cosmique",      desc:"Aura de degats autour de toi"        },
 ];
 
+const TREES = {
+  combat:    { name:"COMBAT",    color:"#ff4466", icon:"⚔" },
+  survie:    { name:"SURVIE",    color:"#44aaff", icon:"⬡" },
+  stellaire: { name:"STELLAIRE", color:"#ffcc44", icon:"✪" },
+};
 const UPGRADE_DEFS = [
-  { id:"hp_up",        name:"Vitalite Renforcee",  icon:"H", desc:"+1 HP max",             cost:30, max:3 },
-  { id:"en_regen",     name:"Conduit Cosmique",    icon:"E", desc:"Energie +25% plus vite", cost:25, max:3 },
-  { id:"ult_red",      name:"Resonance Ultime",    icon:"U", desc:"Cout ultime -10%",       cost:40, max:2 },
-  { id:"start_bomb",   name:"Munitions Etendues",  icon:"B", desc:"+1 bombe de depart",     cost:20, max:3 },
-  { id:"drop_bonus",   name:"Attrait Stellaire",   icon:"D", desc:"+20% chance de drop",    cost:35, max:2 },
-  { id:"combo_shield", name:"Bouclier Combo",      icon:"S", desc:"Bouclier a combo x5",    cost:60, max:1 },
+  // COMBAT — offensive
+  { id:"hp_up",        name:"Vitalite Renforcee",  icon:"♥", desc:"+1 HP max",                  cost:30,  max:3, tree:"combat",    tier:1 },
+  { id:"dmg_up",       name:"Lame Cosmique",       icon:"⚔", desc:"+10% degats infliges",        cost:55,  max:3, tree:"combat",    tier:2, req:{hp_up:1} },
+  { id:"score_up",     name:"Multiplicateur",      icon:"✦", desc:"+25% score gagne",            cost:120, max:2, tree:"combat",    tier:3, req:{dmg_up:2} },
+  // SURVIE — defensive
+  { id:"en_regen",     name:"Conduit Cosmique",    icon:"⟲", desc:"Energie +25% plus vite",     cost:25,  max:3, tree:"survie",    tier:1 },
+  { id:"combo_shield", name:"Bouclier Combo",      icon:"⬡", desc:"Armure a chaque combo x5",   cost:60,  max:1, tree:"survie",    tier:2, req:{en_regen:1} },
+  { id:"phoenix",      name:"Phenix Stellaire",    icon:"♁", desc:"Resurrection 1x par run",    cost:150, max:1, tree:"survie",    tier:3, req:{combo_shield:1} },
+  // STELLAIRE — utility / ult
+  { id:"start_bomb",   name:"Munitions Etendues",  icon:"☄", desc:"+1 bombe au demarrage",      cost:20,  max:3, tree:"stellaire", tier:1 },
+  { id:"drop_bonus",   name:"Attrait Stellaire",   icon:"◈", desc:"+20% chance de drop",        cost:35,  max:2, tree:"stellaire", tier:2, req:{start_bomb:1} },
+  { id:"ult_red",      name:"Resonance Ultime",    icon:"✪", desc:"Cout ultime -10%",           cost:45,  max:2, tree:"stellaire", tier:3, req:{drop_bonus:1} },
 ];
+function reqSatisfied(def, upgs) {
+  if (!def.req) return true;
+  return Object.entries(def.req).every(([r,v]) => (upgs[r]||0) >= v);
+}
+function reqLabel(def) {
+  if (!def.req) return "";
+  return Object.entries(def.req).map(([r,v]) => {
+    const rd = UPGRADE_DEFS.find(u=>u.id===r);
+    return (rd ? rd.name : r) + " " + v;
+  }).join(" + ");
+}
 
 const E_NAMES = { w:"Sentinelle Orbital", f:"Meduse Nebuleuse", h:"Coloss Graviton", mc:"Scarabee Plasma", er:"Titan de Faille" };
 
@@ -412,7 +434,8 @@ function CosmicSlug() {
     const ug = upgObj || {};
     const anIds = (anomalies || []).map(a => a.id);
     const jumpMul = anIds.includes("jumpBoost") ? 1.45 : 1;
-    const enRegenMul = anIds.includes("energyRegen") ? 2 : 1;
+    const enUpgLvl = (ug.en_regen || 0);
+    const enRegenMul = (anIds.includes("energyRegen") ? 2 : 1) * (1 + enUpgLvl * 0.25);
     const extraBombs = anIds.includes("extraBombs") ? 4 : 0;
     const startArmorFull = anIds.includes("startArmor");
     const hordeSpd = anIds.includes("horde") ? 1.25 : 1;
@@ -440,7 +463,7 @@ function CosmicSlug() {
       dustP:Array.from({length:24},()=>({ x:Math.random()*CW, y:rng(50,GROUND_Y-20), sz:rng(1,2.6), sp:rng(0.08,0.32), a:rng(0.03,0.08) })),
       ambientP:Array.from({length:28},()=>({ x:rng(0,CW), y:rng(20,CH-40), sz:rng(0.8,3.2), vx:rng(-0.3,0.3), vy:rng(-0.5,0.1), life:rng(60,200), ml:200, t:rng(0,7) })),
       skyBodies:Array.from({length:5},(_,i)=>({ x:rng(40,CW-40), y:rng(50,CH*0.45), r:rng(i===0?52:18,i===0?95:60), layer:rng(0.02,0.12), ring:Math.random()>0.55, ph:rng(0,7) })),
-      hitFlash:0, screenFlash:0, sfCollected:0, auraTimer:0,
+      hitFlash:0, screenFlash:0, sfCollected:0, auraTimer:0, phoenixUsed:false,
     };
   }, []);
 
@@ -490,7 +513,8 @@ function CosmicSlug() {
     sndCombo(g.combo);
     const comboMul = g.anomalies && g.anomalies.includes("tripleCombo") ? 3 : 1;
     const maxCombo = g.anomalies && g.anomalies.includes("megaCombo") ? 15 : 10;
-    g.score += e.pts * Math.min(g.combo, maxCombo) * comboMul;
+    const scoreMul = 1 + ((g.upgrades && g.upgrades.score_up) || 0) * 0.25;
+    g.score += Math.round(e.pts * Math.min(g.combo, maxCombo) * comboMul * scoreMul);
     // Combo shield (upgrade)
     if (g.upgrades && g.upgrades.combo_shield && g.combo >= 5 && g.p.armor < g.p.maxArmor) {
       g.p.armor = Math.min(g.p.maxArmor, g.p.armor + 1);
@@ -541,7 +565,21 @@ function CosmicSlug() {
       } else {
         p.hp--;
         sExpl(p.x+PW/2, p.y+PH/2, 0.5);
-        if (p.hp <= 0) { p.lives--; p.hp = p.maxHp; p.armor = 0; p.inv = 120; g.vig = 0.5; sExpl(p.x+PW/2, p.y+PH/2, 1.2); }
+        if (p.hp <= 0) {
+          p.lives--; p.hp = p.maxHp; p.armor = 0; p.inv = 120; g.vig = 0.5;
+          sExpl(p.x+PW/2, p.y+PH/2, 1.2);
+          // Phoenix revive: if unlocked and not used, convert a would-be gameover into a full reset
+          if (p.lives <= 0 && g.upgrades && g.upgrades.phoenix && !g.phoenixUsed) {
+            g.phoenixUsed = true;
+            p.lives = 1; p.hp = p.maxHp; p.armor = p.maxArmor;
+            p.inv = 180; p.en = p.maxEn;
+            g.screenFlash = 30; g.shake = 15; g.vig = 0;
+            sExpl(p.x+PW/2, p.y+PH/2, 3, ["#ffcc44","#fff","#ff8800"]);
+            sParts(p.x+PW/2, p.y+PH/2, 20, ["#ffcc44","#ff8800","#fff"], [3,6], [3,7]);
+            g.pickups.push({ x:p.x+PW/2, y:p.y-20, text:"★ PHENIX ★", life:120, color:"#ffcc44" });
+            sndUlt("pyro");
+          }
+        }
       }
     }
   }, [sExpl, sParts]);
@@ -756,7 +794,9 @@ function CosmicSlug() {
             ar.bossSpawned=true;
             g.screenFlash=15;
           } else if(!ar.boss||ar.bossSpawned){
-            ar.cleared=true;ar.locked=false;g.score+=500;
+            ar.cleared=true;ar.locked=false;
+            const _sMul = 1 + ((g.upgrades&&g.upgrades.score_up)||0) * 0.25;
+            g.score += Math.round(500 * _sMul);
             if(!ar.boss){g.pickups.push({ x:ar.x+ar.w/2,y:GROUND_Y-50,text:"ARENA CLEAR!",life:90,color:"#ffee00" });sndArenaComplete();}
           }
         }
@@ -785,7 +825,7 @@ function CosmicSlug() {
         if(cr.tp==="heavy"||cr.tp==="shotgun"||cr.tp==="laser"){p.weapon=cr.tp;p.weaponTimer=600;g.pickups.push({ x:cr.x,y:cr.y-20,text:cr.tp.toUpperCase()+"!",life:60,color:"#ffee00" });sndPickup();}
         else if(cr.tp==="bomb"){p.bombs=Math.min(9,p.bombs+3);g.pickups.push({ x:cr.x,y:cr.y-20,text:"BOMBS +3",life:60,color:"#44ff44" });sndPickup();}
         else if(cr.tp==="food"){p.hp=Math.min(p.maxHp,p.hp+2);g.pickups.push({ x:cr.x,y:cr.y-20,text:"HP UP!",life:60,color:"#ff4466" });sndPickup();}
-        else if(cr.tp==="medal"){g.score+=1000;g.pickups.push({ x:cr.x,y:cr.y-20,text:"+1000",life:60,color:"#ffaa00" });sndPickup();}
+        else if(cr.tp==="medal"){const _sm=1+((g.upgrades&&g.upgrades.score_up)||0)*0.25;const bonus=Math.round(1000*_sm);g.score+=bonus;g.pickups.push({ x:cr.x,y:cr.y-20,text:"+"+bonus,life:60,color:"#ffaa00" });sndPickup();}
         else if(cr.tp==="sf"){const amt=rng(3,8)|0;g.sfCollected=(g.sfCollected||0)+amt;g.pickups.push({ x:cr.x,y:cr.y-20,text:"FRAGMENTS +"+amt,life:60,color:"#ffcc00" });sndSf();}
       }
     });
@@ -816,23 +856,25 @@ function CosmicSlug() {
     // Projectiles
     g.proj=g.proj.filter(b=>{
       b.x+=b.vx;b.y+=b.vy;b.life--;
-      if(b.tp==="bomb"){b.vy+=0.3;if(b.y>=GROUND_Y-6||b.life<=0){sExpl(b.x,b.y,2.5,["#ffee00","#ff6600","#fff"]);sndExplosion(true);g.enemies.forEach(e=>{if(dst(b.x,b.y,e.x+e.w/2,e.y+e.h/2)<100){e.hp-=b.dmg;}});return false;}}
+      if(b.tp==="bomb"){b.vy+=0.3;if(b.y>=GROUND_Y-6||b.life<=0){sExpl(b.x,b.y,2.5,["#ffee00","#ff6600","#fff"]);sndExplosion(true);const _dMul=1+((g.upgrades&&g.upgrades.dmg_up)||0)*0.1;g.enemies.forEach(e=>{if(dst(b.x,b.y,e.x+e.w/2,e.y+e.h/2)<100){e.hp-=Math.max(1,Math.round(b.dmg*_dMul));}});return false;}}
       if(b.life<=0||b.x<camX-100||b.x>camX+viewW+100||b.y<-30||b.y>CH+30)return false;
       if(b.own==="p"&&b.tp!=="bomb"){
         for(let e of g.enemies){
           if(b.x>e.x&&b.x<e.x+e.w&&b.y>e.y&&b.y<e.y+e.h){
-            e.hp-=b.dmg;e.hitF=Math.max(e.hitF||0, b.dmg>=4?8:5);
+            const dMul = 1 + ((g.upgrades&&g.upgrades.dmg_up)||0) * 0.1;
+            const finalD = Math.max(1, Math.round(b.dmg * dMul));
+            e.hp-=finalD;e.hitF=Math.max(e.hitF||0, finalD>=4?8:5);
             if(b.tp==="frost")e.frz=Math.max(e.frz,45);
-            if(b.tp==="fire"){sExpl(b.x,b.y,0.5,["#ff6622","#ffaa00"]);g.enemies.forEach(e2=>{if(e2!==e&&dst(b.x,b.y,e2.x+e2.w/2,e2.y+e2.h/2)<40)e2.hp-=1;});}
+            if(b.tp==="fire"){sExpl(b.x,b.y,0.5,["#ff6622","#ffaa00"]);g.enemies.forEach(e2=>{if(e2!==e&&dst(b.x,b.y,e2.x+e2.w/2,e2.y+e2.h/2)<40)e2.hp-=Math.max(1,Math.round(dMul));});}
             else sParts(b.x,b.y,2,["#fff",cd.color]);
             sndImpact();
-            g.hitFlash=b.dmg>=4?5:3;
+            g.hitFlash=finalD>=4?5:3;
             // Damage number popup
             if(g.pickups.length<40){
-              const dmgCol = b.dmg>=5?"#ff4422" : b.dmg>=3?"#ffcc22" : "#ffffff";
-              g.pickups.push({ x:b.x+rng(-6,6), y:e.y-4, text:"-"+b.dmg, life:30, color:dmgCol, small:true });
+              const dmgCol = finalD>=5?"#ff4422" : finalD>=3?"#ffcc22" : "#ffffff";
+              g.pickups.push({ x:b.x+rng(-6,6), y:e.y-4, text:"-"+finalD, life:30, color:dmgCol, small:true });
             }
-            if(b.dmg>=4&&e.tp!=="boss") g.shake=Math.max(g.shake,2);
+            if(finalD>=4&&e.tp!=="boss") g.shake=Math.max(g.shake,2);
             p.en=Math.min(p.maxEn,p.en+3);
             if(b.laser){b.dmg=Math.max(1,b.dmg-1);break;}
             return false;
@@ -1650,12 +1692,14 @@ function CosmicSlug() {
     const t = touchActive.current;
     keys.current["ArrowLeft"]  = !!(t["left"]);
     keys.current["ArrowRight"] = !!(t["right"]);
-    keys.current[" "]          = !!(t["jump"]) || !!(t["up"]);
+    // Jump: ONLY the dedicated jump button (not joystick up — that's for aiming)
+    keys.current[" "]          = !!(t["jump"]);
     keys.current["ArrowUp"]    = !!(t["up"]);
     keys.current["ArrowDown"]  = !!(t["down"]);
     keys.current["e"]          = !!(t["shoot"]);
     keys.current["a"]          = !!(t["bomb"]);
     keys.current["f"]          = !!(t["ult"]);
+    keys.current["l"]          = !!(t["tp"]);
   }
 
   function TBtn({id, label, style, keyHint}) {
@@ -1910,7 +1954,7 @@ function CosmicSlug() {
     );
   }
 
-  // ── UPGRADES SCREEN ──────────────────────────────────────────────────────────
+  // ── UPGRADES SCREEN — TALENT TREE ────────────────────────────────────────────
   if (screen === "upgrades") {
     const curSf = starFrags;
     function buyUpgrade(id) {
@@ -1918,6 +1962,7 @@ function CosmicSlug() {
       if (!def) return;
       const lvl = upgrades[id] || 0;
       if (lvl >= def.max) return;
+      if (!reqSatisfied(def, upgrades)) return;
       if (curSf < def.cost) return;
       const newSf = curSf - def.cost;
       const newUpg = { ...upgrades, [id]: lvl + 1 };
@@ -1928,66 +1973,125 @@ function CosmicSlug() {
       setStarFrags(newSf);
       setUpgrades(newUpg);
     }
+    function resetUpgrades() {
+      if (!window.confirm("Réinitialiser tous les talents ? (rembourse 70% des SF investis)")) return;
+      let refund = 0;
+      UPGRADE_DEFS.forEach(def => {
+        const lvl = upgrades[def.id] || 0;
+        refund += lvl * def.cost;
+      });
+      refund = Math.floor(refund * 0.7);
+      const newSf = curSf + refund;
+      const p = loadPersist();
+      p.starFrags = newSf;
+      p.upgrades = {};
+      savePersist(p);
+      setStarFrags(newSf);
+      setUpgrades({});
+    }
+
+    const treeKeys = Object.keys(TREES);
+    const COL_W = 168, COL_GAP = 6;
+    const totalW = treeKeys.length * COL_W + (treeKeys.length - 1) * COL_GAP;
+
     return (
-      <div style={{...screenStyle, width:CW, height:CH}}>
+      <div style={{...screenStyle, width:CW, height:CH, justifyContent:"flex-start", paddingTop:8}}>
         <StarBg/>
-        <div style={{fontSize:22,fontWeight:800,color:"#ffcc44",marginBottom:2}}>✦ AMÉLIORATIONS</div>
+        <div style={{fontSize:18,fontWeight:800,color:"#ffcc44",letterSpacing:2}}>✦ ARBRE DE TALENTS</div>
         <div style={{
-          fontSize:16, fontWeight:700, color:"#ffcc44", marginBottom:18,
-          padding:"5px 18px", borderRadius:14, background:"rgba(255,200,60,0.1)",
+          fontSize:13, fontWeight:700, color:"#ffcc44", marginTop:3, marginBottom:8,
+          padding:"3px 14px", borderRadius:12, background:"rgba(255,200,60,0.1)",
           border:"1px solid #ffcc4433"
         }}>✦ {curSf} Star Fragments</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",maxWidth:600,marginBottom:20}}>
-          {UPGRADE_DEFS.map(def => {
-            const lvl = upgrades[def.id] || 0;
-            const maxed = lvl >= def.max;
-            const canBuy = !maxed && curSf >= def.cost;
+
+        <div style={{display:"flex", gap:COL_GAP, width:totalW}}>
+          {treeKeys.map(treeKey => {
+            const tree = TREES[treeKey];
+            const items = UPGRADE_DEFS.filter(u => u.tree === treeKey).sort((a,b) => b.tier - a.tier);
             return (
-              <div key={def.id}
-                style={{
-                  width:160, padding:"12px 10px", borderRadius:8,
-                  border:`2px solid ${maxed?"#ffcc44":"#334455"}`,
-                  background:"rgba(10,15,30,0.85)",
-                  textAlign:"center", transition:"border-color 0.2s"
-                }}>
-                <div style={{fontSize:22,marginBottom:4,color:canBuy?"#ffcc44":maxed?"#ffcc44":"#556"}}>{def.icon}</div>
-                <div style={{fontSize:11,fontWeight:700,color:"#ddd",marginBottom:4}}>{def.name}</div>
-                <div style={{fontSize:9,color:"#888",marginBottom:8,lineHeight:1.4}}>{def.desc}</div>
-                <div style={{display:"flex",justifyContent:"center",gap:3,marginBottom:8}}>
-                  {Array.from({length:def.max},(_,i)=>(
-                    <span key={i} style={{
-                      width:10,height:10,borderRadius:2,display:"inline-block",
-                      background:i<lvl?"#ffcc44":"#223",border:"1px solid #445"
-                    }}/>
-                  ))}
-                </div>
-                {maxed ? (
-                  <div style={{fontSize:10,color:"#ffcc44",fontWeight:700}}>✓ MAX</div>
-                ) : (
-                  <button
-                    onClick={() => buyUpgrade(def.id)}
-                    disabled={!canBuy}
-                    style={{
-                      padding:"5px 12px", borderRadius:5,
-                      border:`1px solid ${canBuy?"#ffcc44":"#334"}`,
-                      background:canBuy?"rgba(255,200,60,0.12)":"rgba(20,25,40,0.5)",
-                      color:canBuy?"#ffcc44":"#556",
-                      cursor:canBuy?"pointer":"not-allowed",
-                      fontSize:10, fontWeight:700, fontFamily:"'Courier New',monospace"
+              <div key={treeKey} style={{
+                width:COL_W, display:"flex", flexDirection:"column", gap:4,
+                padding:"6px 5px", borderRadius:8,
+                border:`1px solid ${tree.color}44`,
+                background:`linear-gradient(180deg, ${tree.color}10 0%, rgba(5,8,20,0.8) 100%)`,
+              }}>
+                <div style={{
+                  textAlign:"center", fontSize:13, fontWeight:800, color:tree.color,
+                  letterSpacing:2, padding:"3px 0 4px 0",
+                  borderBottom:`1px solid ${tree.color}33`
+                }}>{tree.icon} {tree.name}</div>
+                {items.map(def => {
+                  const lvl = upgrades[def.id] || 0;
+                  const maxed = lvl >= def.max;
+                  const reqMet = reqSatisfied(def, upgrades);
+                  const canBuy = !maxed && reqMet && curSf >= def.cost;
+                  const locked = !reqMet && lvl === 0;
+                  return (
+                    <div key={def.id} style={{
+                      padding:"5px 6px", borderRadius:6,
+                      border:`1.5px solid ${maxed?tree.color:locked?"#222":canBuy?tree.color+"aa":"#334"}`,
+                      background: locked ? "rgba(5,8,15,0.75)" : "rgba(12,16,30,0.88)",
+                      opacity: locked ? 0.5 : 1,
+                      transition:"all 0.2s"
                     }}>
-                    ✦ {def.cost} SF
-                  </button>
-                )}
+                      <div style={{display:"flex", alignItems:"center", gap:6}}>
+                        <div style={{fontSize:16, color: maxed?tree.color:canBuy?tree.color:locked?"#556":"#889"}}>{locked?"🔒":def.icon}</div>
+                        <div style={{flex:1, lineHeight:1.15}}>
+                          <div style={{fontSize:9, fontWeight:700, color:"#ddd"}}>{def.name}</div>
+                          <div style={{fontSize:8, color:"#889"}}>{def.desc}</div>
+                        </div>
+                      </div>
+                      <div style={{display:"flex", justifyContent:"center", gap:2, marginTop:3}}>
+                        {Array.from({length:def.max},(_,i)=>(
+                          <span key={i} style={{
+                            width:7, height:7, borderRadius:1, display:"inline-block",
+                            background: i<lvl ? tree.color : "#223",
+                            border: `1px solid ${i<lvl ? tree.color : "#334"}`
+                          }}/>
+                        ))}
+                      </div>
+                      {maxed ? (
+                        <div style={{fontSize:8, color:tree.color, fontWeight:700, textAlign:"center", marginTop:2}}>✓ MAX</div>
+                      ) : locked ? (
+                        <div style={{fontSize:7, color:"#667", textAlign:"center", marginTop:2, lineHeight:1.2}}>Requiert:<br/>{reqLabel(def)}</div>
+                      ) : (
+                        <button
+                          onClick={() => buyUpgrade(def.id)}
+                          disabled={!canBuy}
+                          style={{
+                            display:"block", width:"100%", marginTop:3,
+                            padding:"3px 0", borderRadius:4,
+                            border:`1px solid ${canBuy?tree.color:"#334"}`,
+                            background: canBuy ? tree.color+"22" : "rgba(20,25,40,0.5)",
+                            color: canBuy ? tree.color : "#556",
+                            cursor: canBuy ? "pointer" : "not-allowed",
+                            fontSize:9, fontWeight:700, fontFamily:"'Courier New',monospace"
+                          }}>
+                          ✦ {def.cost} SF {lvl>0?`(${lvl}/${def.max})`:""}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
         </div>
-        <button className="menu-btn"
-          onClick={() => setScreen("title")}
-          style={{padding:"8px 20px",borderRadius:6,border:"1px solid #334",background:"rgba(255,255,255,0.04)",
-            color:"#778",cursor:"pointer",fontSize:12,fontFamily:"'Courier New',monospace",transition:"all 0.2s"}}>
-          ← Retour
-        </button>
+
+        <div style={{display:"flex", gap:10, marginTop:10}}>
+          <button className="menu-btn"
+            onClick={() => setScreen("title")}
+            style={{padding:"6px 18px",borderRadius:6,border:"1px solid #334",background:"rgba(255,255,255,0.04)",
+              color:"#99aacc",cursor:"pointer",fontSize:11,fontFamily:"'Courier New',monospace",transition:"all 0.2s"}}>
+            ← Retour
+          </button>
+          <button className="menu-btn"
+            onClick={resetUpgrades}
+            style={{padding:"6px 18px",borderRadius:6,border:"1px solid #663333",background:"rgba(150,50,50,0.12)",
+              color:"#cc8888",cursor:"pointer",fontSize:11,fontFamily:"'Courier New',monospace",transition:"all 0.2s"}}>
+            ↺ Respec (70%)
+          </button>
+        </div>
       </div>
     );
   }
@@ -2113,45 +2217,56 @@ function CosmicSlug() {
         {/* ── Virtual joystick (left thumb) ────────────────────────── */}
         <VirtualJoystick />
 
-        {/* ── Action buttons (right thumb) — gamepad-style layout ── */}
-        {/* jump = primary (like A button) — biggest, bottom-right */}
-        <TBtn id="jump" label="△" style={{
-          bottom:76, right:56, width:50, height:50,
+        {/* ── Action buttons — diamond layout (ABXY-style), right thumb ── */}
+        {/* SHOOT (B) — rightmost, primary attack — biggest */}
+        <TBtn id="shoot" label="⚡" keyHint="E" style={{
+          bottom:92, right:14, width:54, height:54,
           borderRadius:"50%",
-          background:"rgba(80,180,255,0.13)",
-          border:"2px solid rgba(80,180,255,0.35)",
+          background:"rgba(60,230,120,0.18)",
+          border:"2px solid rgba(60,230,120,0.45)",
           fontSize:18,
           pointerEvents:"auto"
         }} />
-        {/* shoot = above-left of jump */}
-        <TBtn id="shoot" label="⚡" style={{
-          bottom:122, right:100, width:40, height:40,
+        {/* JUMP (A) — bottom, primary move */}
+        <TBtn id="jump" label="↑" keyHint="SPACE" style={{
+          bottom:38, right:70, width:52, height:52,
           borderRadius:"50%",
-          background:"rgba(60,230,120,0.10)",
-          border:"1.5px solid rgba(60,230,120,0.28)",
+          background:"rgba(80,180,255,0.18)",
+          border:"2px solid rgba(80,180,255,0.45)",
+          fontSize:20, fontWeight:900,
           pointerEvents:"auto"
         }} />
-        {/* bomb = directly above jump */}
-        <TBtn id="bomb"  label="💣" style={{
-          bottom:130, right:56, width:38, height:38,
+        {/* BOMB (X) — left of cluster */}
+        <TBtn id="bomb"  label="💣" keyHint="A" style={{
+          bottom:92, right:126, width:46, height:46,
           borderRadius:"50%",
-          background:"rgba(255,60,60,0.09)",
-          border:"1.5px solid rgba(255,60,60,0.25)",
+          background:"rgba(255,90,90,0.16)",
+          border:"2px solid rgba(255,90,90,0.38)",
           pointerEvents:"auto"
         }} />
-        {/* ult = top-left of cluster, smallest */}
-        <TBtn id="ult"   label="★" style={{
-          bottom:122, right:140, width:34, height:34,
+        {/* ULT (Y) — top, special */}
+        <TBtn id="ult"   label="★" keyHint="F" style={{
+          bottom:146, right:70, width:46, height:46,
           borderRadius:"50%",
-          background:"rgba(180,80,255,0.09)",
-          border:"1.5px solid rgba(180,80,255,0.22)",
+          background:"rgba(180,80,255,0.16)",
+          border:"2px solid rgba(180,80,255,0.4)",
+          fontSize:18,
           pointerEvents:"auto"
         }} />
+        {/* TP — only for void class, below joystick on left */}
+        {selCls === "void_c" && <TBtn id="tp" label="⟐" keyHint="L" style={{
+          bottom:46, left:126, width:42, height:42,
+          borderRadius:"50%",
+          background:"rgba(200,110,255,0.16)",
+          border:"2px solid rgba(200,110,255,0.4)",
+          fontSize:16,
+          pointerEvents:"auto"
+        }} />}
 
         {/* ── Version indicator ───────────────────────────────────── */}
         <div style={{position:"absolute",bottom:4,left:"50%",transform:"translateX(-50%)",
           fontSize:9,color:"rgba(255,255,255,0.22)",fontFamily:"'Courier New',monospace",
-          pointerEvents:"none",letterSpacing:1}}>v13</div>
+          pointerEvents:"none",letterSpacing:1}}>v14</div>
 
         {/* ── Pause ────────────────────────────────────────────────── */}
         <button
@@ -2176,7 +2291,7 @@ const _csRoot = ReactDOM.createRoot(document.getElementById("root"));
 _csRoot.render(React.createElement(CosmicSlug));
   </script>
   <script>
-    var APP_VERSION = 'v13';
+    var APP_VERSION = 'v14';
     if ('serviceWorker' in navigator) {
       var _swRefreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', function() {
@@ -2189,7 +2304,7 @@ _csRoot.render(React.createElement(CosmicSlug));
           var unregPromises = regs.map(function(r) { return r.unregister(); });
           return Promise.all(unregPromises);
         }).then(function() {
-          return navigator.serviceWorker.register('./sw.js?v=13');
+          return navigator.serviceWorker.register('./sw.js?v=14');
         }).then(function(reg) {
           reg.update();
           // If a waiting SW exists, tell it to take over immediately
@@ -2225,11 +2340,11 @@ _csRoot.render(React.createElement(CosmicSlug));
       if (ov) ov.style.display = (isMobile && isPortrait) ? 'flex' : 'none';
       var scale, marginLeft, marginTop;
       if (isMobile && !isPortrait) {
-        // Cover: fill screen width with a 2.5% margin on each side so content
-        // clears iPhone rounded corners / safe-area insets (no hard clipping).
-        scale = (sw / 800) * 0.975;
+        // Fit: scale so the full 800x520 stays on screen — HUD must not be cropped.
+        // Small 3% padding from edges for notch / home indicator safety.
+        scale = Math.min(sw / 800, sh / 520) * 0.97;
         marginLeft = (sw - 800 * scale) / 2;
-        marginTop = (sh - 520 * scale) / 2;   // can be negative (crops top+bottom)
+        marginTop  = (sh - 520 * scale) / 2;
       } else {
         // Desktop / portrait: uniform fit — no cropping.
         scale = Math.min(sw / 800, sh / 520);
