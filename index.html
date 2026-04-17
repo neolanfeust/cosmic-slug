@@ -429,7 +429,8 @@ function CosmicSlug() {
       p: { x:100, y:GROUND_Y-PH, vy:0, og:true, f:1, atkCD:0, ultCD:0, inv:0, af:0, at:0,
            lives:dc.lives, hp:dc.hp+maxHpBonus, maxHp:dc.hp+maxHpBonus, armor:startArmor, maxArmor:5,
            en:0, maxEn:100, tDash:false, tTimer:0, tDir:0, weapon:"normal", weaponTimer:0,
-           bombs:startBombs, breathT:0, sqY:0, recoil:0, aimX:1, aimY:0 },
+           bombs:startBombs, breathT:0, sqY:0, recoil:0, aimX:1, aimY:0,
+           coyote:0, jumpBuf:0, _jPrev:false, footT:0, landVy:0 },
       stage:1, maxStage:MAX_STAGE,
       cam:{ x:0, target:0 },
       proj:[], enemies:[], expl:[], parts:[], fx:[], pickups:[], drops:[], boss:null,
@@ -639,9 +640,29 @@ function CosmicSlug() {
       sParts(p.x+PW/2, p.y+PH/2, 1, ["#ffdd00","#ffff88"], [3,6], [0.5,2]);
       if (p.tTimer <= 0) p.tDash = false;
     } else {
-      if (k["q"]||k["Q"]||k["ArrowLeft"])  { p.x-=SPD; p.f=-1; p.at++; }
-      else if (k["d"]||k["D"]||k["ArrowRight"])              { p.x+=SPD; p.f=1;  p.at++; }
-      if ((k[" "]||k["w"]||k["W"]) && p.og) { p.vy=JUMP*(g.jumpMul||1); p.og=false; p.sqY=-5; }
+      let moving = false;
+      if (k["q"]||k["Q"]||k["ArrowLeft"])  { p.x-=SPD; p.f=-1; p.at++; moving=true; }
+      else if (k["d"]||k["D"]||k["ArrowRight"])              { p.x+=SPD; p.f=1;  p.at++; moving=true; }
+      // Jump: buffered + coyote time + variable jump height
+      const _jkey = !!(k[" "]||k["w"]||k["W"]);
+      if (_jkey && !p._jPrev) p.jumpBuf = 10;
+      p._jPrev = _jkey;
+      if (p.jumpBuf > 0) p.jumpBuf--;
+      if (p.jumpBuf > 0 && (p.og || (p.coyote||0) > 0)) {
+        p.vy = JUMP*(g.jumpMul||1); p.og=false; p.sqY=-5;
+        p.coyote=0; p.jumpBuf=0;
+        sParts(p.x+PW/2, p.y+PH-2, 4, ["#ffffff33","#aabbff44","#ddddff55"], [1,3], [0.5,2]);
+      }
+      // Variable jump height — release early for a shorter hop
+      if (!_jkey && p.vy < -4) p.vy *= 0.7;
+      // Footstep dust while running on ground
+      if (moving && p.og) {
+        p.footT = (p.footT||0) + 1;
+        if (p.footT > 10) {
+          p.footT = 0;
+          sParts(p.x+PW/2-p.f*6, p.y+PH-2, 1, ["#ffffff22","#aabbcc33"], [1,2], [0.3,1]);
+        }
+      }
     }
     p.x = Math.max(0, Math.min(LEVEL_W-PW, p.x));
 
@@ -660,9 +681,18 @@ function CosmicSlug() {
 
     // Physics
     if (!p.tDash) { p.vy+=GRAVITY; p.y+=p.vy; }
+    const _wasAir = !p.og;
+    p.landVy = p.vy;
     p.og = false;
     if (p.y+PH >= GROUND_Y) { p.y=GROUND_Y-PH; if(p.vy>3)p.sqY=4; p.vy=0; p.og=true; }
     [...lv.plats,...lv.movPlats].forEach(pl=>{ if(p.vy>=0&&p.x+PW>pl.x&&p.x<pl.x+pl.w&&p.y+PH>=pl.y&&p.y+PH<=pl.y+pl.h+10){p.y=pl.y-PH;p.vy=0;p.og=true;if(pl.vx)p.x+=pl.vx;} });
+    // Coyote time tracking: remember ground contact for 7 frames after leaving
+    if (p.og) p.coyote = 7; else if (p.coyote > 0) p.coyote--;
+    // Landing dust on hard landings
+    if (_wasAir && p.og && p.landVy > 7) {
+      sParts(p.x+PW/2, p.y+PH-1, ~~(Math.min(8, p.landVy*0.7)), ["#ffffff44","#aabbcc55","#ccccff66"], [1,3], [1,3]);
+      if (p.landVy > 11) g.shake = Math.max(g.shake, 3);
+    }
     if (p.atkCD>0)p.atkCD--; if(p.ultCD>0)p.ultCD--; if(p.inv>0)p.inv--;
     if (p.at>8){p.af=(p.af+1)%4;p.at=0;}
     const enRegenMul = g.enRegenMul || 1;
@@ -791,12 +821,18 @@ function CosmicSlug() {
       if(b.own==="p"&&b.tp!=="bomb"){
         for(let e of g.enemies){
           if(b.x>e.x&&b.x<e.x+e.w&&b.y>e.y&&b.y<e.y+e.h){
-            e.hp-=b.dmg;e.hitF=4;
+            e.hp-=b.dmg;e.hitF=Math.max(e.hitF||0, b.dmg>=4?8:5);
             if(b.tp==="frost")e.frz=Math.max(e.frz,45);
             if(b.tp==="fire"){sExpl(b.x,b.y,0.5,["#ff6622","#ffaa00"]);g.enemies.forEach(e2=>{if(e2!==e&&dst(b.x,b.y,e2.x+e2.w/2,e2.y+e2.h/2)<40)e2.hp-=1;});}
             else sParts(b.x,b.y,2,["#fff",cd.color]);
             sndImpact();
-            g.hitFlash=3;
+            g.hitFlash=b.dmg>=4?5:3;
+            // Damage number popup
+            if(g.pickups.length<40){
+              const dmgCol = b.dmg>=5?"#ff4422" : b.dmg>=3?"#ffcc22" : "#ffffff";
+              g.pickups.push({ x:b.x+rng(-6,6), y:e.y-4, text:"-"+b.dmg, life:30, color:dmgCol, small:true });
+            }
+            if(b.dmg>=4&&e.tp!=="boss") g.shake=Math.max(g.shake,2);
             p.en=Math.min(p.maxEn,p.en+3);
             if(b.laser){b.dmg=Math.max(1,b.dmg-1);break;}
             return false;
@@ -1152,6 +1188,17 @@ function CosmicSlug() {
       if(e.frz>0)ctx.globalAlpha=0.8;
       const fc=e.frz>0;
       if(e.tp!=="f"){ctx.fillStyle="rgba(0,0,0,0.2)";ctx.beginPath();ctx.ellipse(0,e.h/2+2,e.w*0.4,3,0,0,Math.PI*2);ctx.fill();}
+      // Shot telegraph — pulse warning 14 frames before firing (only when target is in range)
+      if(e.frz<=0 && e.shootT > 0 && e.shootT < 14 && dst(p.x+PW/2,p.y+PH/2,e.x+e.w/2,e.y+e.h/2) < (e.tp==="boss"?600:420)) {
+        const pulse = 1 - e.shootT/14;
+        ctx.save();ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = 0.25 + pulse*0.55;
+        ctx.fillStyle = "#ff3322";
+        ctx.beginPath();ctx.arc(0, -e.h/2-9, 2.5 + pulse*3, 0, Math.PI*2);ctx.fill();
+        ctx.fillStyle = "#ffcc44";
+        ctx.beginPath();ctx.arc(0, -e.h/2-9, 1 + pulse*1.5, 0, Math.PI*2);ctx.fill();
+        ctx.restore();
+      }
 
       if(e.tp==="w"){
         ctx.fillStyle=fc?"#4477aa":"#882244";ctx.beginPath();ctx.moveTo(-e.w/2+2,-e.h/2+10);ctx.lineTo(e.w/2-2,-e.h/2+10);ctx.lineTo(e.w/2-1,e.h/2-8);ctx.lineTo(-e.w/2+1,e.h/2-8);ctx.closePath();ctx.fill();
@@ -1369,12 +1416,37 @@ function CosmicSlug() {
 
     // Explosions (additive)
     ctx.save();ctx.globalCompositeOperation="lighter";
-    g.expl.forEach(ex=>{ctx.globalAlpha=ex.a*0.5;const c=ex.cols||["#ffee00","#ff6600"];ctx.fillStyle=c[0];ctx.beginPath();ctx.arc(ex.x,ex.y,ex.r,0,Math.PI*2);ctx.fill();ctx.fillStyle=c[1]||c[0];ctx.beginPath();ctx.arc(ex.x,ex.y,ex.r*0.6,0,Math.PI*2);ctx.fill();ctx.globalAlpha=ex.a*0.3;ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(ex.x,ex.y,ex.r*0.25,0,Math.PI*2);ctx.fill();});
+    g.expl.forEach(ex=>{
+      const c=ex.cols||["#ffee00","#ff6600"];
+      ctx.globalAlpha=ex.a*0.5;ctx.fillStyle=c[0];ctx.beginPath();ctx.arc(ex.x,ex.y,ex.r,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=c[1]||c[0];ctx.beginPath();ctx.arc(ex.x,ex.y,ex.r*0.6,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=ex.a*0.3;ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(ex.x,ex.y,ex.r*0.25,0,Math.PI*2);ctx.fill();
+      // Shockwave ring — expands faster than core, fades out
+      ctx.globalAlpha=ex.a*0.7;ctx.strokeStyle=c[1]||c[0];ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(ex.x,ex.y,ex.r*1.35,0,Math.PI*2);ctx.stroke();
+      ctx.globalAlpha=ex.a*0.35;ctx.strokeStyle="#ffffff";ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(ex.x,ex.y,ex.r*1.15,0,Math.PI*2);ctx.stroke();
+    });
     g.parts.forEach(pt=>{ctx.globalAlpha=(pt.life/pt.ml)*0.7;ctx.fillStyle=pt.c;ctx.fillRect(pt.x-pt.sz/2,pt.y-pt.sz/2,pt.sz,pt.sz);});
     ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";ctx.restore();
 
     // Pickup texts
-    g.pickups.forEach(pk=>{ctx.globalAlpha=pk.life/60;ctx.fillStyle=pk.color;ctx.font="bold 13px 'Courier New',monospace";ctx.textAlign="center";ctx.fillText(pk.text,pk.x,pk.y);});
+    g.pickups.forEach(pk=>{
+      ctx.globalAlpha=Math.min(1,pk.life/30);
+      ctx.textAlign="center";
+      if(pk.small){
+        // Damage numbers — smaller, with dark shadow for readability
+        ctx.font="bold 10px 'Courier New',monospace";
+        ctx.fillStyle="rgba(0,0,0,0.7)";
+        ctx.fillText(pk.text,pk.x+1,pk.y+1);
+        ctx.fillStyle=pk.color;
+        ctx.fillText(pk.text,pk.x,pk.y);
+      } else {
+        ctx.fillStyle=pk.color;
+        ctx.font="bold 13px 'Courier New',monospace";
+        ctx.fillText(pk.text,pk.x,pk.y);
+      }
+    });
     ctx.globalAlpha=1;
 
     ctx.restore();// end world translate
@@ -1402,15 +1474,43 @@ function CosmicSlug() {
 
     // HP bar
     const hpX=180,hpW=80;
-    ctx.fillStyle="#0a0a1a";ctx.fillRect(hpX,4,hpW,8);ctx.fillStyle=p.hp>1?"#cc2244":"#ff0022";ctx.fillRect(hpX+1,5,(hpW-2)*(p.hp/p.maxHp),6);ctx.strokeStyle="#ff446644";ctx.lineWidth=1;ctx.strokeRect(hpX,4,hpW,8);ctx.fillStyle="#fff8";ctx.font="bold 7px 'Courier New',monospace";ctx.fillText("HP",hpX+2,10);
+    const hpCrit = p.hp<=1 && p.hp>0;
+    ctx.fillStyle="#0a0a1a";ctx.fillRect(hpX,4,hpW,8);
+    if (hpCrit) {
+      const hpFlash = 0.55 + 0.45*Math.sin(g.time*0.28);
+      ctx.globalAlpha = hpFlash;
+      ctx.fillStyle="#ff0022";ctx.fillRect(hpX+1,5,(hpW-2)*(p.hp/p.maxHp),6);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle="#ff0033"; ctx.lineWidth=1.5; ctx.strokeRect(hpX-1,3,hpW+2,10);
+    } else {
+      ctx.fillStyle="#cc2244";ctx.fillRect(hpX+1,5,(hpW-2)*(p.hp/p.maxHp),6);
+      ctx.strokeStyle="#ff446644";ctx.lineWidth=1;ctx.strokeRect(hpX,4,hpW,8);
+    }
+    ctx.fillStyle="#fff8";ctx.font="bold 7px 'Courier New',monospace";ctx.fillText("HP",hpX+2,10);
     // Armor bar
     ctx.fillStyle="#0a0a1a";ctx.fillRect(hpX,14,hpW,7);if(p.armor>0){ctx.fillStyle="#3366cc";ctx.fillRect(hpX+1,15,(hpW-2)*(p.armor/p.maxArmor),5);}ctx.strokeStyle="#4488ff33";ctx.strokeRect(hpX,14,hpW,7);ctx.fillStyle="#88bbff88";ctx.font="bold 6px 'Courier New',monospace";ctx.fillText("ARM",hpX+2,19);
     // Energy bar
     ctx.fillStyle="#0a0a1a";ctx.fillRect(hpX,23,hpW,8);ctx.fillStyle=cd.color;ctx.fillRect(hpX+1,24,(hpW-2)*(p.en/p.maxEn),6);const up=cd.ultCost/p.maxEn;ctx.fillStyle="#ffffff33";ctx.fillRect(hpX+hpW*up,22,1,10);ctx.strokeStyle=cd.color+"44";ctx.strokeRect(hpX,23,hpW,8);ctx.fillStyle="#fff6";ctx.font="bold 7px 'Courier New',monospace";ctx.fillText("EN",hpX+2,29);
     // Ult status
-    const ur=p.en>=cd.ultCost;ctx.fillStyle=ur?cd.accent:"#444";ctx.font="bold 10px 'Courier New',monospace";
+    const ur=p.en>=cd.ultCost;
     const ultN={pyro:"FIREWALL",cryo:"ICE NOVA",foudre:"TH.DASH",void_c:"B.HOLE"};
-    ctx.fillText("[F] "+(ultN[g.cls]||"ULT")+(ur?" READY":""),180,42);
+    ctx.font="bold 10px 'Courier New',monospace";
+    if (ur) {
+      const ultPulse = 0.75 + 0.25*Math.sin(g.time*0.18);
+      ctx.save();ctx.globalAlpha = ultPulse;
+      ctx.fillStyle = cd.accent;
+      ctx.fillText("[F] "+(ultN[g.cls]||"ULT")+" READY",180,42);
+      ctx.restore();
+      // Subtle underline glow
+      ctx.save();ctx.globalCompositeOperation="lighter";
+      ctx.globalAlpha = 0.2 + 0.15*Math.sin(g.time*0.18);
+      ctx.fillStyle = cd.accent;
+      ctx.fillRect(180, 44, 96, 1);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = "#444";
+      ctx.fillText("[F] "+(ultN[g.cls]||"ULT"),180,42);
+    }
 
     // Right side
     ctx.textAlign="right";
@@ -2051,7 +2151,7 @@ function CosmicSlug() {
         {/* ── Version indicator ───────────────────────────────────── */}
         <div style={{position:"absolute",bottom:4,left:"50%",transform:"translateX(-50%)",
           fontSize:9,color:"rgba(255,255,255,0.22)",fontFamily:"'Courier New',monospace",
-          pointerEvents:"none",letterSpacing:1}}>v12</div>
+          pointerEvents:"none",letterSpacing:1}}>v13</div>
 
         {/* ── Pause ────────────────────────────────────────────────── */}
         <button
@@ -2076,7 +2176,7 @@ const _csRoot = ReactDOM.createRoot(document.getElementById("root"));
 _csRoot.render(React.createElement(CosmicSlug));
   </script>
   <script>
-    var APP_VERSION = 'v12';
+    var APP_VERSION = 'v13';
     if ('serviceWorker' in navigator) {
       var _swRefreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', function() {
@@ -2089,7 +2189,7 @@ _csRoot.render(React.createElement(CosmicSlug));
           var unregPromises = regs.map(function(r) { return r.unregister(); });
           return Promise.all(unregPromises);
         }).then(function() {
-          return navigator.serviceWorker.register('./sw.js?v=12');
+          return navigator.serviceWorker.register('./sw.js?v=13');
         }).then(function(reg) {
           reg.update();
           // If a waiting SW exists, tell it to take over immediately
