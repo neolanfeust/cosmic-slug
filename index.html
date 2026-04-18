@@ -43,10 +43,10 @@ const { useState, useEffect, useRef, useCallback } = React;
 // ══════════════════════════════════════════════════
 //  CONSTANTS
 // ══════════════════════════════════════════════════
-const CW = 800, CH = 520, PW = 40, PH = 48, DPR_CAP = 1.5;
+let CW = 800; const CH = 520, PW = 40, PH = 48, DPR_CAP = 1.5;
 const GRAVITY = 0.6, JUMP = -12, SPD = 4, GROUND_Y = CH - 100;
 const LEVEL_W = 4000, ZONE_W = LEVEL_W / 3, MAX_STAGE = 4;
-const CAMERA_ZOOM_X = 0.96, VIEW_W = CW / CAMERA_ZOOM_X, MAX_ENEMY_PROJECTILES = 30;
+const CAMERA_ZOOM_X = 0.96, MAX_ENEMY_PROJECTILES = 30;
 
 const CLASSES = {
   pyro:  { name:"PYRO",   desc:"Boules de feu + Mur de flammes",     color:"#ff6622", glow:"#ff4400", accent:"#ffaa00", icon:"P", ultCost:40, atkCD:14 },
@@ -427,7 +427,17 @@ function CosmicSlug() {
   const [pendingAnomalies, setPendingAnomalies] = useState([]);
   const [paused, setPaused] = useState(false);
   const [touchDevice, setTouchDevice] = useState(false);
+  const [, _bumpCW] = useState(0);
   const pausedRef = useRef(false);
+
+  // Expose a setter so the outer _scaleGame can update the dynamic CW
+  // and trigger a re-render so menus pick up the new width.
+  useEffect(() => {
+    window._setCW = (w) => { CW = w; _bumpCW(v => v + 1); };
+    if (typeof window._curCW === 'number') CW = window._curCW;
+    if (typeof window._scaleGame === 'function') window._scaleGame();
+    return () => { delete window._setCW; };
+  }, []);
 
   const init = useCallback((cls, d, upgObj, anomalies) => {
     const dc = DIFF[d] || DIFF.normal;
@@ -668,7 +678,7 @@ function CosmicSlug() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = true;
     g.time++;
-    const viewW = VIEW_W;
+    const viewW = CW / CAMERA_ZOOM_X;
     const renderStress = !!g.boss || g.proj.length>18 || g.enemies.length>7 || g.fx.length>3;
 
     // --- UPDATE ---
@@ -2268,7 +2278,7 @@ function CosmicSlug() {
         {/* ── Version indicator ───────────────────────────────────── */}
         <div style={{position:"absolute",bottom:4,left:"50%",transform:"translateX(-50%)",
           fontSize:9,color:"rgba(255,255,255,0.22)",fontFamily:"'Courier New',monospace",
-          pointerEvents:"none",letterSpacing:1}}>v15</div>
+          pointerEvents:"none",letterSpacing:1}}>v16</div>
 
         {/* ── Pause ────────────────────────────────────────────────── */}
         <button
@@ -2293,7 +2303,7 @@ const _csRoot = ReactDOM.createRoot(document.getElementById("root"));
 _csRoot.render(React.createElement(CosmicSlug));
   </script>
   <script>
-    var APP_VERSION = 'v15';
+    var APP_VERSION = 'v16';
     if ('serviceWorker' in navigator) {
       var _swRefreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', function() {
@@ -2306,7 +2316,7 @@ _csRoot.render(React.createElement(CosmicSlug));
           var unregPromises = regs.map(function(r) { return r.unregister(); });
           return Promise.all(unregPromises);
         }).then(function() {
-          return navigator.serviceWorker.register('./sw.js?v=15');
+          return navigator.serviceWorker.register('./sw.js?v=16');
         }).then(function(reg) {
           reg.update();
           // If a waiting SW exists, tell it to take over immediately
@@ -2330,7 +2340,10 @@ _csRoot.render(React.createElement(CosmicSlug));
     _rotOverlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:#000;color:#4af;font-family:monospace;align-items:center;justify-content:center;flex-direction:column;text-align:center;';
     document.body.appendChild(_rotOverlay);
 
-    // Scale the game to fill the screen
+    // Scale the game to fill the screen.
+    // CW (game world width) is dynamic: we widen it to match the viewport's aspect
+    // so there are no black bars on landscape phones / wide screens.
+    // CH stays fixed at 520 — vertical gameplay metrics never change.
     function _scaleGame() {
       const root = document.getElementById('root');
       const ov = document.getElementById('_rot');
@@ -2340,14 +2353,23 @@ _csRoot.render(React.createElement(CosmicSlug));
       const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || sw < 900;
       const isPortrait = sh > sw;
       if (ov) ov.style.display = (isMobile && isPortrait) ? 'flex' : 'none';
-      // Uniform fit — no cropping. Full screen coverage on mobile.
-      const scale = Math.min(sw / 800, sh / 520);
-      const marginLeft = (sw - 800 * scale) / 2;
+      // Compute the CW that perfectly fills the viewport at scale = sh/520.
+      // Clamp so menus stay readable (>= 800) and the camera doesn't get crazy wide.
+      const targetCW = Math.max(800, Math.min(1400, Math.round(520 * sw / sh)));
+      if (typeof window._setCW === 'function' && window._curCW !== targetCW) {
+        window._setCW(targetCW);
+        window._curCW = targetCW;
+      }
+      const cwNow = window._curCW || 800;
+      const scale = Math.min(sw / cwNow, sh / 520);
+      const marginLeft = (sw - cwNow * scale) / 2;
       const marginTop  = (sh - 520 * scale) / 2;
+      root.style.width = cwNow + 'px';
       root.style.transform = 'scale(' + scale + ')';
       root.style.marginLeft = marginLeft + 'px';
       root.style.marginTop  = marginTop  + 'px';
     }
+    window._scaleGame = _scaleGame;
     window.addEventListener('resize', _scaleGame);
     window.addEventListener('orientationchange', function(){ setTimeout(_scaleGame, 300); });
     document.addEventListener('fullscreenchange', _scaleGame);
