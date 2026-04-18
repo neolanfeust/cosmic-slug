@@ -43,7 +43,17 @@ const { useState, useEffect, useRef, useCallback } = React;
 // ══════════════════════════════════════════════════
 //  CONSTANTS
 // ══════════════════════════════════════════════════
-let CW = 800; const CH = 520, PW = 40, PH = 48, DPR_CAP = 1.5;
+// Dynamic game-world width: widens the canvas to match the viewport's aspect
+// ratio so there are no black bars on landscape phones / wide monitors.
+// Initialized BEFORE React renders so the first paint is already correct.
+let CW = (() => {
+  const sw = window.innerWidth, sh = window.innerHeight;
+  if (sw > 0 && sh > 0 && sw > sh) {
+    return Math.max(800, Math.min(1400, Math.round(520 * sw / sh)));
+  }
+  return 800;
+})();
+const CH = 520, PW = 40, PH = 48, DPR_CAP = 1.5;
 const GRAVITY = 0.6, JUMP = -12, SPD = 4, GROUND_Y = CH - 100;
 const LEVEL_W = 4000, ZONE_W = LEVEL_W / 3, MAX_STAGE = 4;
 const CAMERA_ZOOM_X = 0.96, MAX_ENEMY_PROJECTILES = 30;
@@ -2278,7 +2288,7 @@ function CosmicSlug() {
         {/* ── Version indicator ───────────────────────────────────── */}
         <div style={{position:"absolute",bottom:4,left:"50%",transform:"translateX(-50%)",
           fontSize:9,color:"rgba(255,255,255,0.22)",fontFamily:"'Courier New',monospace",
-          pointerEvents:"none",letterSpacing:1}}>v16</div>
+          pointerEvents:"none",letterSpacing:1}}>v17</div>
 
         {/* ── Pause ────────────────────────────────────────────────── */}
         <button
@@ -2303,7 +2313,7 @@ const _csRoot = ReactDOM.createRoot(document.getElementById("root"));
 _csRoot.render(React.createElement(CosmicSlug));
   </script>
   <script>
-    var APP_VERSION = 'v16';
+    var APP_VERSION = 'v17';
     if ('serviceWorker' in navigator) {
       var _swRefreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', function() {
@@ -2316,7 +2326,7 @@ _csRoot.render(React.createElement(CosmicSlug));
           var unregPromises = regs.map(function(r) { return r.unregister(); });
           return Promise.all(unregPromises);
         }).then(function() {
-          return navigator.serviceWorker.register('./sw.js?v=16');
+          return navigator.serviceWorker.register('./sw.js?v=17');
         }).then(function(reg) {
           reg.update();
           // If a waiting SW exists, tell it to take over immediately
@@ -2354,17 +2364,17 @@ _csRoot.render(React.createElement(CosmicSlug));
       const isPortrait = sh > sw;
       if (ov) ov.style.display = (isMobile && isPortrait) ? 'flex' : 'none';
       // Compute the CW that perfectly fills the viewport at scale = sh/520.
-      // Clamp so menus stay readable (>= 800) and the camera doesn't get crazy wide.
-      const targetCW = Math.max(800, Math.min(1400, Math.round(520 * sw / sh)));
+      const targetCW = (sw > sh)
+        ? Math.max(800, Math.min(1400, Math.round(520 * sw / sh)))
+        : 800;
       if (typeof window._setCW === 'function' && window._curCW !== targetCW) {
         window._setCW(targetCW);
-        window._curCW = targetCW;
       }
-      const cwNow = window._curCW || 800;
-      const scale = Math.min(sw / cwNow, sh / 520);
-      const marginLeft = (sw - cwNow * scale) / 2;
+      window._curCW = targetCW;
+      const scale = Math.min(sw / targetCW, sh / 520);
+      const marginLeft = (sw - targetCW * scale) / 2;
       const marginTop  = (sh - 520 * scale) / 2;
-      root.style.width = cwNow + 'px';
+      root.style.width = targetCW + 'px';
       root.style.transform = 'scale(' + scale + ')';
       root.style.marginLeft = marginLeft + 'px';
       root.style.marginTop  = marginTop  + 'px';
