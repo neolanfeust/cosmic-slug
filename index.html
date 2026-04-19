@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -2288,7 +2288,7 @@ function CosmicSlug() {
         {/* ── Version indicator ───────────────────────────────────── */}
         <div style={{position:"absolute",bottom:4,left:"50%",transform:"translateX(-50%)",
           fontSize:9,color:"rgba(255,255,255,0.22)",fontFamily:"'Courier New',monospace",
-          pointerEvents:"none",letterSpacing:1}}>v19</div>
+          pointerEvents:"none",letterSpacing:1}}>v20</div>
 
         {/* ── Pause ────────────────────────────────────────────────── */}
         <button
@@ -2313,7 +2313,7 @@ const _csRoot = ReactDOM.createRoot(document.getElementById("root"));
 _csRoot.render(React.createElement(CosmicSlug));
   </script>
   <script>
-    var APP_VERSION = 'v19';
+    var APP_VERSION = 'v20';
     if ('serviceWorker' in navigator) {
       var _swRefreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', function() {
@@ -2326,7 +2326,7 @@ _csRoot.render(React.createElement(CosmicSlug));
           var unregPromises = regs.map(function(r) { return r.unregister(); });
           return Promise.all(unregPromises);
         }).then(function() {
-          return navigator.serviceWorker.register('./sw.js?v=19');
+          return navigator.serviceWorker.register('./sw.js?v=20');
         }).then(function(reg) {
           reg.update();
           // If a waiting SW exists, tell it to take over immediately
@@ -2358,8 +2358,13 @@ _csRoot.render(React.createElement(CosmicSlug));
       const root = document.getElementById('root');
       const ov = document.getElementById('_rot');
       if (!root) return;
-      const sw = window.innerWidth;
-      const sh = window.innerHeight;
+      // Prefer visualViewport (true visible area after OS chrome, browser bars,
+      // safe-areas) over innerWidth/Height which can over-report on Android PWA
+      // and cause the right edge of the game (shoot/jump buttons) to render
+      // outside the visible area.
+      const vv = window.visualViewport;
+      const sw = vv ? Math.floor(vv.width)  : window.innerWidth;
+      const sh = vv ? Math.floor(vv.height) : window.innerHeight;
       const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || sw < 900;
       const isPortrait = sh > sw;
       if (ov) ov.style.display = (isMobile && isPortrait) ? 'flex' : 'none';
@@ -2383,6 +2388,10 @@ _csRoot.render(React.createElement(CosmicSlug));
     window.addEventListener('resize', _scaleGame);
     window.addEventListener('orientationchange', function(){ setTimeout(_scaleGame, 300); });
     document.addEventListener('fullscreenchange', _scaleGame);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', _scaleGame);
+      window.visualViewport.addEventListener('scroll', _scaleGame);
+    }
     // In browser mode, auto-request fullscreen on first tap to remove chrome
     (function() {
       var isPWA = window.matchMedia('(display-mode: standalone)').matches || !!window.navigator.standalone;
