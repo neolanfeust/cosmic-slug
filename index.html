@@ -28,6 +28,7 @@
       width: 800px; height: 520px;
       position: relative; overflow: hidden;
       transform-origin: top left;
+      flex-shrink: 0;
     }
     button { font-family: 'Courier New', monospace; }
   </style>
@@ -2288,7 +2289,7 @@ function CosmicSlug() {
         {/* ── Version indicator ───────────────────────────────────── */}
         <div style={{position:"absolute",bottom:4,left:"50%",transform:"translateX(-50%)",
           fontSize:9,color:"rgba(255,255,255,0.22)",fontFamily:"'Courier New',monospace",
-          pointerEvents:"none",letterSpacing:1}}>v20</div>
+          pointerEvents:"none",letterSpacing:1}}>v22</div>
 
         {/* ── Pause ────────────────────────────────────────────────── */}
         <button
@@ -2313,7 +2314,7 @@ const _csRoot = ReactDOM.createRoot(document.getElementById("root"));
 _csRoot.render(React.createElement(CosmicSlug));
   </script>
   <script>
-    var APP_VERSION = 'v20';
+    var APP_VERSION = 'v22';
     if ('serviceWorker' in navigator) {
       var _swRefreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', function() {
@@ -2326,7 +2327,7 @@ _csRoot.render(React.createElement(CosmicSlug));
           var unregPromises = regs.map(function(r) { return r.unregister(); });
           return Promise.all(unregPromises);
         }).then(function() {
-          return navigator.serviceWorker.register('./sw.js?v=20');
+          return navigator.serviceWorker.register('./sw.js?v=22');
         }).then(function(reg) {
           reg.update();
           // If a waiting SW exists, tell it to take over immediately
